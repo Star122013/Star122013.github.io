@@ -1,20 +1,208 @@
 ---
-import { type CollectionEntry, getCollection, render } from 'astro:content';
-import BlogPost from '../../layouts/BlogPost.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
-		params: { slug: post.id },
-		props: post,
-	}));
+  const posts = await getCollection('blog');
+  return posts
+    .filter((p) => !p.data.draft)
+    .map((post) => ({
+      params: { slug: post.id },
+      props: { post },
+    }));
 }
-type Props = CollectionEntry<'blog'>;
 
-const post = Astro.props;
-const { Content } = await render(post);
+const { post } = Astro.props;
+const { title, date, description, tags, body } = post.data;
 ---
 
-<BlogPost {...post.data}>
-	<Content />
-</BlogPost>
+<BaseLayout title={title} description={description}>
+  <article class="article">
+    <header class="article-header">
+      <h1 class="article-title">{title}</h1>
+      <time class="article-date" datetime={date.toISOString()}>
+        {date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}
+      </time>
+      {description && <p class="article-desc">{description}</p>}
+      {tags && tags.length > 0 && (
+        <div class="article-tags">
+          {tags.map((tag) => (
+            <a href={`/tags/${encodeURIComponent(tag)}`} class="tag">▸ {tag}</a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    <div class="article-body prose">
+      <Fragment set:html={body} />
+    </div>
+  </article>
+</BaseLayout>
+
+<script data-astro-rerun>
+  (function () {
+    const body = document.querySelector('.article-body');
+    if (!body) return;
+
+    // ═══ 清理脚注括号 ⋯[<sup>1</sup>] → ⋯<sup>1</sup> ═══
+    // Typst 把 [...] 写在 sup 外面，括号是前后文本节点
+    body.querySelectorAll('sup[role="doc-noteref"]').forEach(function (ref) {
+      var prev = ref.previousSibling;
+      var next = ref.nextSibling;
+      if (prev && prev.nodeType === 3) {
+        prev.textContent = prev.textContent.replace(/\[$/, '');
+      }
+      if (next && next.nodeType === 3) {
+        next.textContent = next.textContent.replace(/^\]/, '');
+        // 如果只剩空文本则移除
+        if (next.textContent === '') next.remove();
+      }
+    });
+
+    // ═══ 脚注内容 → 侧边注 ═══
+    var endnotes = body.querySelector('section[role="doc-endnotes"]');
+    if (!endnotes) return;
+    var items = endnotes.querySelectorAll('li');
+    if (!items.length) return;
+
+    var fnMap = new Map();
+    items.forEach(function (li) { fnMap.set(li.id, li.innerHTML); });
+
+    body.querySelectorAll('sup[role="doc-noteref"]').forEach(function (ref) {
+      var href = ref.querySelector('a')?.getAttribute('href');
+      if (!href) return;
+      var html = fnMap.get(href.slice(1));
+      if (!html) return;
+
+      var note = document.createElement('span');
+      note.className = 'sidenote';
+      note.innerHTML = html;
+      ref.after(note);
+    });
+
+    endnotes.remove();
+  })();
+</script>
+
+<style>
+  .article {
+    max-width: 95ch;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  .article-header {
+    max-width: 65ch;
+    margin-bottom: 3rem;
+  }
+  .article-title {
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    font-weight: 750;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  .article-date {
+    font-size: 0.875em;
+    color: var(--muted-foreground);
+    transition: color 0.3s ease;
+  }
+  .article-desc {
+    margin-top: 0.75rem;
+    color: var(--muted-foreground);
+    font-size: var(--text-sm);
+    transition: color 0.3s ease;
+  }
+  .article-tags {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+  .article-tags .tag {
+    color: var(--muted-foreground);
+    text-decoration: none;
+    font-size: 0.8em;
+    padding: 0.15em 0.55em;
+    border-radius: 999px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  }
+  .article-tags .tag:hover {
+    color: var(--accent-foreground);
+    background: var(--accent);
+    border-color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* Content column width — no extra padding, let sidenotes overflow */
+  .article-body {
+    max-width: 65ch;
+  }
+
+  /* Sidenote: floats right, extends into the right margin via negative margin */
+  :global(.sidenote) {
+    float: right;
+    clear: right;
+    width: 250px;
+    margin-right: -280px;
+    margin-top: 0;
+    font-size: 0.82em;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+    border-left: 2px solid var(--accent);
+    padding-left: 0.75em;
+    opacity: 0.85;
+  }
+  :global(.sidenote sup) {
+    margin-right: 0.3em;
+  }
+
+  /* In-text footnote markers — 无括号，accent 色 */
+  .article-body :global(sup[role="doc-noteref"]) {
+    font-size: 0.7em;
+    vertical-align: super;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .article-body :global(sup[role="doc-noteref"] a) {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s ease;
+  }
+  .article-body :global(sup[role="doc-noteref"] a:hover) {
+    color: var(--foreground);
+  }
+
+  /* Endnotes fallback (no-JS) */
+  .article-body :global(section[role="doc-endnotes"]) {
+    margin-top: 2em;
+    padding-top: 1em;
+    border-top: 1px solid var(--border);
+    font-size: 0.85em;
+    color: var(--muted-foreground);
+  }
+  .article-body :global(section[role="doc-endnotes"] ol) {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+  .article-body :global(section[role="doc-endnotes"] li) {
+    margin-bottom: 0.5em;
+  }
+
+  /* Mobile */
+  @media (max-width: 1000px) {
+    :global(.sidenote) {
+      float: none;
+      width: auto;
+      margin: 0.5em 0;
+      border-left: 1px solid var(--border);
+      padding: 0.5em 0 0.5em 0.75em;
+    }
+  }
+</style>

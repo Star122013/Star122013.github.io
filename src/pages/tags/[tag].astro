@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostList from '../../components/PostList.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  const tags = [...new Set(posts.flatMap((p) => p.data.tags || []))];
+
+  return tags.map((tag) => ({
+    params: { tag },
+    props: { tag },
+  }));
+}
+
+const { tag } = Astro.props;
+const posts = await getCollection('blog');
+const filtered = posts
+  .filter((p) => !p.data.draft && (p.data.tags || []).includes(tag))
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+---
+
+<BaseLayout title={`#${tag}`}>
+  <div class="page container">
+    <h1>▸<span style="font-weight: 300;"> {tag}</span></h1>
+    <p class="count">{filtered.length} post{filtered.length !== 1 ? 's' : ''}</p>
+
+    <section class="posts">
+      <PostList posts={filtered} />
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .page h1 {
+    margin-bottom: 0.25rem;
+  }
+  .count {
+    color: var(--muted-foreground);
+    font-size: var(--text-sm);
+    margin-bottom: 2rem;
+  }
+  .posts { padding-bottom: 2rem; }
+</style>

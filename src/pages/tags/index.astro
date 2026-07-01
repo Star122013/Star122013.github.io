@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostList from '../../components/PostList.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+const published = posts
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+// Group posts by tag
+const tagMap = new Map<string, typeof published>();
+for (const post of published) {
+  for (const tag of post.data.tags || []) {
+    if (!tagMap.has(tag)) tagMap.set(tag, []);
+    tagMap.get(tag)!.push(post);
+  }
+}
+const tags = [...tagMap.keys()].sort();
+---
+
+<BaseLayout title="Tags">
+  <div class="page container">
+    <h1>Tags</h1>
+    {tags.length > 0 ? (
+      tags.map((tag) => (
+        <section class="tag-group">
+          <h2>▸ {tag} <span class="count">{tagMap.get(tag)!.length}</span></h2>
+          <PostList posts={tagMap.get(tag)!} />
+        </section>
+      ))
+    ) : (
+      <p class="empty">No tags yet.</p>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .page h1 {
+    margin-bottom: 2rem;
+  }
+  .tag-group {
+    margin-bottom: 2.5rem;
+  }
+  .tag-group h2 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--foreground);
+  }
+  .tag-group .count {
+    font-weight: 300;
+    color: var(--muted-foreground);
+    font-size: 0.85em;
+  }
+  .empty { color: var(--muted-foreground); }
+</style>

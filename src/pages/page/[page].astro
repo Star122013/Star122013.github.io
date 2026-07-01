@@ -1,0 +1,96 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostList from '../../components/PostList.astro';
+import { getCollection } from 'astro:content';
+import { pagination, site } from '../../config';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  const published = posts
+    .filter((p) => !p.data.draft)
+    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+  const pageSize = pagination.pageSize;
+  const totalPages = Math.ceil(published.length / pageSize);
+
+  return Array.from({ length: totalPages - 1 }, (_, i) => {
+    const page = i + 2;
+    const start = i * pageSize + pageSize;
+    const end = start + pageSize;
+    return {
+      params: { page: String(page) },
+      props: {
+        pagePosts: published.slice(start, end),
+        page,
+        totalPages,
+      },
+    };
+  });
+}
+
+const { pagePosts, page, totalPages } = Astro.props;
+const prevPage = page - 1 === 1 ? '/' : `/page/${page - 1}`;
+const nextPage = page < totalPages ? `/page/${page + 1}` : null;
+---
+
+<BaseLayout title={`Page ${page}`}>
+  <div class="hero">
+    <h1>{site.title}</h1>
+    <p class="tagline">Words first. Nothing else.</p>
+  </div>
+
+  <section class="posts container">
+    <PostList posts={pagePosts} />
+
+    <nav class="pagination">
+      <a href={prevPage} class="page-link prev">← Previous</a>
+      <span class="page-info">{page} / {totalPages}</span>
+      {nextPage && <a href={nextPage} class="page-link next">Next →</a>}
+    </nav>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: 4rem 0 2rem;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+  }
+  .tagline {
+    margin-top: 0.5rem;
+    color: var(--muted-foreground);
+  }
+  .posts {
+    padding-bottom: 3rem;
+  }
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    transition: border-color 0.3s ease;
+  }
+  .page-link {
+    color: var(--foreground);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    transition: color 0.2s ease, gap 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .page-link:hover {
+    color: var(--muted-foreground);
+    gap: 0.5rem;
+  }
+  .page-info {
+    color: var(--muted-foreground);
+    font-size: 0.85em;
+  }
+</style>

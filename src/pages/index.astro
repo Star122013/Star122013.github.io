@@ -1,49 +1,203 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostList from '../components/PostList.astro';
+import { getCollection } from 'astro:content';
+import { pagination, site } from '../config';
+
+const posts = await getCollection('blog');
+const published = posts
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+const pageSize = pagination.pageSize;
+const totalPages = Math.ceil(published.length / pageSize);
+const pagePosts = published.slice(0, pageSize);
+const page = 1;
+const nextPage = page < totalPages ? '/page/2' : null;
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This template
-				serves as a lightweight, minimally-styled starting point for anyone looking to build a personal
-				website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
-		</main>
-		<Footer />
-	</body>
-</html>
+<BaseLayout title="Home">
+  <div class="hero">
+    <h1>{site.title}</h1>
+    <p class="tagline">Words first. Nothing else.</p>
+  </div>
+
+  <!-- 内联搜索 -->
+  <div class="search-inline container">
+    <input type="search" id="search-input" placeholder="Search posts…" />
+    <div id="search-results" class="search-results"></div>
+  </div>
+
+  <section class="posts container">
+    <PostList posts={pagePosts} />
+
+    {totalPages > 1 && (
+      <nav class="pagination">
+        <span class="page-info">{page} / {totalPages}</span>
+        {nextPage && <a href={nextPage} class="page-link next">Next →</a>}
+      </nav>
+    )}
+  </section>
+</BaseLayout>
+
+<script data-astro-rerun>
+  (async function () {
+    const input = document.getElementById('search-input');
+    const results = document.getElementById('search-results');
+    if (!input || !results) return;
+
+    const res = await fetch('/search-index.json');
+    const index = await res.json();
+
+    function search(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) { results.innerHTML = ''; return []; }
+      return index.filter(function (post) {
+        return (
+          post.title.toLowerCase().includes(q) ||
+          (post.description && post.description.toLowerCase().includes(q)) ||
+          (post.tags && post.tags.some(function (t) { return t.toLowerCase().includes(q); }))
+        );
+      });
+    }
+
+    function render(items) {
+      if (items.length === 0) {
+        results.innerHTML = '<p class="empty">No results.</p>';
+        return;
+      }
+      results.innerHTML = items.map(function (post) {
+        return '<article class="result-item">' +
+          '<h3><a href="/blog/' + post.id + '">' + post.title + '</a></h3>' +
+          '<div class="meta">' +
+            '<time>' + post.date + '</time>' +
+            (post.tags && post.tags.length ? post.tags.map(function (t) { return '<span class="tag">' + t + '</span>'; }).join('') : '') +
+          '</div>' +
+          (post.description ? '<p>' + post.description + '</p>' : '') +
+        '</article>';
+      }).join('');
+    }
+
+    input.addEventListener('input', function () {
+      var items = search(input.value);
+      render(items);
+    });
+  })();
+</script>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: 4rem 0 2rem;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+  }
+  .tagline {
+    margin-top: 0.5rem;
+    color: var(--muted-foreground);
+  }
+
+  /* 内联搜索 */
+  .search-inline {
+    margin-bottom: 2rem;
+  }
+  #search-input {
+    width: 100%;
+    padding: 0.6em 1em;
+    font-size: var(--text-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--background);
+    color: var(--foreground);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  #search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--border);
+  }
+  #search-input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.7;
+  }
+  .search-results {
+    margin-top: 0.75rem;
+  }
+  .result-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-item:last-child {
+    border-bottom: none;
+  }
+  .result-item h3 {
+    font-size: var(--text-base);
+    font-weight: 600;
+  }
+  .result-item h3 a {
+    color: var(--foreground);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .result-item h3 a:hover {
+    color: var(--accent);
+  }
+  .result-item .meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+  .result-item .meta .tag {
+    font-size: 0.75em;
+    padding: 0.1em 0.45em;
+    border-radius: 999px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .result-item p {
+    margin-top: 0.25rem;
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+  .search-results .empty {
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
+    padding: 0.5rem 0;
+  }
+
+  .posts {
+    padding-bottom: 3rem;
+  }
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    transition: border-color 0.3s ease;
+  }
+  .page-link {
+    color: var(--foreground);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    transition: color 0.2s ease, gap 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .page-link:hover {
+    color: var(--muted-foreground);
+    gap: 0.5rem;
+  }
+  .page-info {
+    color: var(--muted-foreground);
+    font-size: var(--text-sm);
+  }
+</style>

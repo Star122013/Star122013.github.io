@@ -1,0 +1,31 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+	"files": {
+		"includes": ["src/**/*.astro", "src/**/*.css"]
+	},
+	"formatter": {
+		"indentStyle": "space", // default is `tab`
+		"lineWidth": 100 // default is `80`
+	},
+	"javascript": {
+		"formatter": {
+			"lineWidth": 120 // override `formatter.lineWidth`
+		}
+	},
+	"json": {
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"html": {
+		"formatter": {
+			"enabled": true
+		},
+		"experimentalFullSupportEnabled": true
+	},
+	"css": {
+		"formatter": {
+			"enabled": false
+		}
+	}
+}
