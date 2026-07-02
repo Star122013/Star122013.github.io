@@ -23,6 +23,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - uses: typst-community/setup-typst@v4
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
