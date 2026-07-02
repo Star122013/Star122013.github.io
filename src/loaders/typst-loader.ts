@@ -31,8 +31,11 @@ function parseFrontmatter(filePath: string) {
 			tags: Array.isArray(meta.tags) ? meta.tags.map(String) : [],
 			description: String(meta.description || ""),
 		};
-	} catch {
-		return null;
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		throw new Error(
+			`typst eval failed for ${filePath}. Is typst installed? ${msg}`,
+		);
 	}
 }
 
