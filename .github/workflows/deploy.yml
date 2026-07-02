@@ -6,29 +6,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: typst-community/setup-typst@v5.1.0
+      - uses: withastro/action@v6
 
-      - uses: pnpm/action-setup@v6.0.9
-        with:
-          version: 11
-
-      - uses: actions/setup-node@v6.4.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - uses: typst-community/setup-typst@v4
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
