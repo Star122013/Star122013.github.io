@@ -100,7 +100,7 @@ const { title, date, description, tags, body } = post.data;
       var div = document.createElement('div');
       div.className = 'callout';
       div.setAttribute('data-callout', type);
-      div.innerHTML = '<div class="callout-title"><span class="callout-title-icon">' + icons[type] + '</span><span class="callout-title-text">' + titles[type] + '</span></div><div class="callout-content">' + p.innerHTML + '</div>';
+      div.innerHTML = '<div class="callout-label"><span class="callout-label-icon">' + icons[type] + '</span><span>' + titles[type] + '</span></div><div class="callout-content">' + p.innerHTML + '</div>';
       p.parentNode.replaceChild(div, p);
     });
 

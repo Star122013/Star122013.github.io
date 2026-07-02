@@ -12,8 +12,7 @@ const published = posts
 const pageSize = pagination.pageSize;
 const totalPages = Math.ceil(published.length / pageSize);
 const pagePosts = published.slice(0, pageSize);
-const page = 1;
-const nextPage = page < totalPages ? '/page/2' : null;
+const nextPage = totalPages > 1 ? '/page/2' : null;
 ---
 
 <BaseLayout title="Home">
@@ -33,7 +32,7 @@ const nextPage = page < totalPages ? '/page/2' : null;
 
     {totalPages > 1 && (
       <nav class="pagination">
-        <span class="page-info">{page} / {totalPages}</span>
+        <span class="page-info">1 / {totalPages}</span>
         {nextPage && <a href={nextPage} class="page-link next">Next →</a>}
       </nav>
     )}

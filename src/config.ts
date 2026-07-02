@@ -11,7 +11,6 @@ export const pagination = {
 } as const;
 
 export const ui = {
-	logo: "Blog",
 	nav: [
 		{ label: "Home", href: "/" },
 		{ label: "Tags", href: "/tags" },
