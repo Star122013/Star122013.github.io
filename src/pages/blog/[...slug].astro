@@ -84,7 +84,58 @@ const { title, date, description, tags, body } = post.data;
       ref.after(note);
     });
 
-    endnotes.remove();
+    // ═══ Callout 框：检测 > 开头的段落 → callout 组件 ═══
+    body.querySelectorAll('p').forEach(function (p) {
+      var text = p.textContent || '';
+      var m = text.match(/^>\s*(Tip|Warning|Important|Note|Caution)\s*[:：]?\s*/i);
+      if (!m) return;
+
+      var type = m[1].toLowerCase();
+      var titles = { tip: 'Tip', warning: 'Warning', important: 'Important', note: 'Note', caution: 'Caution' };
+      var icons  = { tip: '💡', warning: '⚠️', important: '❗', note: '📝', caution: '🔥' };
+
+      // 去掉 > Type: 前缀
+      p.innerHTML = p.innerHTML.replace(/^>\s*\w+\s*[:：]?\s*/i, '');
+
+      var div = document.createElement('div');
+      div.className = 'callout';
+      div.setAttribute('data-callout', type);
+      div.innerHTML = '<div class="callout-title"><span class="callout-title-icon">' + icons[type] + '</span><span class="callout-title-text">' + titles[type] + '</span></div><div class="callout-content">' + p.innerHTML + '</div>';
+      p.parentNode.replaceChild(div, p);
+    });
+
+    // ═══ 代码块：语言标签 + 复制按钮 ═══
+    body.querySelectorAll('code[data-lang]').forEach(function (code) {
+      var lang = code.getAttribute('data-lang') || '';
+
+      // 用容器包裹 code，统一外边框
+      var wrapper = document.createElement('div');
+      wrapper.className = 'code-block';
+      code.parentNode.insertBefore(wrapper, code);
+      wrapper.appendChild(code);
+
+      // 语言标签（坐落在顶边线上）
+      var langSpan = document.createElement('span');
+      langSpan.className = 'code-lang';
+      langSpan.textContent = lang;
+      wrapper.appendChild(langSpan);
+
+      // 复制按钮（右上角）
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'code-copy';
+      copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+      copyBtn.setAttribute('aria-label', 'Copy code');
+      copyBtn.addEventListener('click', function () {
+        var text = code.textContent || '';
+        navigator.clipboard.writeText(text).then(function () {
+          copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+          setTimeout(function () {
+            copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+          }, 2000);
+        });
+      });
+      wrapper.appendChild(copyBtn);
+    });
   })();
 </script>
 
@@ -96,7 +147,7 @@ const { title, date, description, tags, body } = post.data;
   }
   .article-header {
     max-width: 65ch;
-    margin-bottom: 3rem;
+    margin: 0 auto 3rem;
   }
   .article-title {
     font-size: clamp(1.5rem, 4vw, 2.25rem);
@@ -138,10 +189,13 @@ const { title, date, description, tags, body } = post.data;
     text-decoration: none;
   }
 
-  /* Content column width — no extra padding, let sidenotes overflow */
+  /* Content column width — 居中，sidenote 通过负 margin 溢出到右侧 */
   .article-body {
     max-width: 65ch;
+    margin: 0 auto;
   }
+
+
 
   /* Sidenote: floats right, extends into the right margin via negative margin */
   :global(.sidenote) {
@@ -195,14 +249,53 @@ const { title, date, description, tags, body } = post.data;
     margin-bottom: 0.5em;
   }
 
-  /* Mobile */
+  /* 代码块：语言标签 + 复制按钮（坐落在顶边线上） */
+  .article-body :global(.code-lang) {
+    position: absolute;
+    top: -0.55em;
+    left: 0.8em;
+    padding: 0 0.35em;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", "Fira Code", monospace;
+    background: var(--background);
+  }
+  .article-body :global(.code-copy) {
+    position: absolute;
+    top: 0.4em;
+    right: 0.5em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted-foreground);
+    padding: 0.2em;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease, opacity 0.15s ease;
+    opacity: 0.5;
+  }
+  .article-body :global(.code-copy:hover) {
+    color: var(--foreground);
+    opacity: 1;
+  }
+
+  /* 窄屏：sidenote 隐藏，底部端注显示 */
   @media (max-width: 1000px) {
     :global(.sidenote) {
-      float: none;
-      width: auto;
-      margin: 0.5em 0;
-      border-left: 1px solid var(--border);
-      padding: 0.5em 0 0.5em 0.75em;
+      display: none;
+    }
+    .article-body :global(section[role="doc-endnotes"]) {
+      display: block !important;
+    }
+  }
+  /* 宽屏：sidenote 显示，底部端注隐藏 */
+  @media (min-width: 1001px) {
+    .article-body :global(section[role="doc-endnotes"]) {
+      display: none;
     }
   }
 </style>

@@ -36,21 +36,15 @@
               enable = true;
               # 避免 --fail-on-change 因文件修改时间变化而误报
               settings.fail-on-change = false;
+              settings.formatters = with pkgs; [
+                biome
+                typstyle
+              ];
             };
             deadnix.enable = true;
             statix.enable = true;
             end-of-file-fixer.enable = true;
             check-merge-conflicts.enable = true;
-          };
-
-          treefmt = {
-            projectRootFile = "flake.nix";
-            programs = {
-              deadnix.enable = true;
-              nixfmt.enable = true;
-              jsonfmt.enable = true;
-              biome.enable = true;
-            };
           };
 
           devShells.default = pkgs.mkShell {
@@ -61,8 +55,8 @@
               nodejs-slim.npm
               pnpm
               typescript
-              biome
               typst
+              tinymist
             ];
             inputsFrom = [ config.pre-commit.devShell ];
           };
