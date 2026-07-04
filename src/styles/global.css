@@ -232,6 +232,18 @@ img {
 	font-weight: 600;
 }
 
+/* ===== Figure（图片 + caption）：居中 + 小字号 caption ===== */
+.prose figure {
+	text-align: center;
+	margin: 2em 0;
+}
+.prose figcaption {
+	text-align: center;
+	font-size: var(--text-sm); /* 0.85em，约 9.35pt */
+	color: var(--muted-foreground);
+	margin-top: 0.5em;
+}
+
 /* ===== View Transitions — 全局生效（不被 Astro scoped CSS 影响） ===== */
 ::view-transition-old(root) {
 	animation: 200ms ease-in both vt-old;
