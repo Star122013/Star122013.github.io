@@ -1,4 +1,4 @@
-#import "_template.typ": *
+#import "../_template.typ": *
 
 #show: post.with(
   title: "My First Post",

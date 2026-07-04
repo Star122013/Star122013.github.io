@@ -18,14 +18,17 @@ const slug = title
 
 const now = new Date();
 const date = `datetime(year: ${now.getFullYear()}, month: ${now.getMonth() + 1}, day: ${now.getDate()})`;
-const file = path.join("src/content/blog", `${slug}.typ`);
 
-if (fs.existsSync(file)) {
-	console.error(`File already exists: ${file}`);
+// Each post is a folder containing index.typ + its own images
+const postDir = path.join("src/content/blog", slug);
+const file = path.join(postDir, "index.typ");
+
+if (fs.existsSync(postDir)) {
+	console.error(`Post already exists: ${postDir}`);
 	process.exit(1);
 }
 
-const template = `#import "_template.typ": *
+const template = `#import "../_template.typ": *
 
 #show: post.with(
   title: "${title.replace(/"/g, '\\"')}",
@@ -39,5 +42,7 @@ const template = `#import "_template.typ": *
 Write your post here.
 `;
 
+fs.mkdirSync(postDir, { recursive: true });
 fs.writeFileSync(file, template);
 console.log(`Created: ${file}`);
+console.log(`Images for this post go in: ${postDir}/`);
