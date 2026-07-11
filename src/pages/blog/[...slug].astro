@@ -120,17 +120,17 @@ const { title, date, description, tags, body } = post.data;
       langSpan.textContent = lang;
       wrapper.appendChild(langSpan);
 
-      // 复制按钮（右上角）
+      // 复制按钮（右上角，与语言标签左右对称）
       var copyBtn = document.createElement('button');
       copyBtn.className = 'code-copy';
-      copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+      copyBtn.innerHTML = 'Copy <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
       copyBtn.setAttribute('aria-label', 'Copy code');
       copyBtn.addEventListener('click', function () {
         var text = code.textContent || '';
         navigator.clipboard.writeText(text).then(function () {
-          copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+          copyBtn.innerHTML = 'Copied <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
           setTimeout(function () {
-            copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+            copyBtn.innerHTML = 'Copy <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
           }, 2000);
         });
       });
@@ -250,37 +250,37 @@ const { title, date, description, tags, body } = post.data;
   }
 
   /* 代码块：语言标签 + 复制按钮（坐落在顶边线上） */
-  .article-body :global(.code-lang) {
-    position: absolute;
-    top: -0.55em;
-    left: 0.8em;
-    padding: 0 0.35em;
-    font-size: 0.7em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted-foreground);
-    font-family: ui-monospace, "Cascadia Code", "SF Mono", "Fira Code", monospace;
-    background: var(--background);
-  }
+  .article-body :global(.code-lang),
   .article-body :global(.code-copy) {
     position: absolute;
-    top: 0.4em;
-    right: 0.5em;
-    background: none;
-    border: none;
-    cursor: pointer;
+    top: -0.7em;
+    padding: 0.1em 0.5em;
+    font-size: 0.82em;
+    font-weight: 650;
+    line-height: 1.4;
     color: var(--muted-foreground);
-    padding: 0.2em;
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", "Fira Code", monospace;
+    background: var(--muted);
+    border: 1px solid var(--border);
     border-radius: 4px;
+  }
+  .article-body :global(.code-lang) {
+    left: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .article-body :global(.code-copy) {
+    right: 0.8em;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    transition: color 0.15s ease, opacity 0.15s ease;
-    opacity: 0.5;
+    gap: 0.2em;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   }
   .article-body :global(.code-copy:hover) {
-    color: var(--foreground);
-    opacity: 1;
+    color: var(--accent-foreground);
+    background: var(--accent);
+    border-color: var(--accent);
   }
 
   /* 窄屏：sidenote 隐藏，底部端注显示 */

@@ -293,13 +293,15 @@ img {
 	margin: 1.5em 0;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
+	background: var(--card);
 }
+
 .code-block code[data-lang] {
 	display: block;
 	overflow-x: auto;
 	padding: 1em;
 	padding-top: calc(1em + 8px);
-	background: var(--muted);
+	background: transparent;
 	font-size: var(--text-sm);
 	line-height: 1.6;
 	white-space: pre;
