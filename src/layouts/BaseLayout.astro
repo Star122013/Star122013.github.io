@@ -30,6 +30,7 @@ const pageDesc = description || site.description;
         var isLight = saved === 'light' || (!saved && !prefersDark);
         var root = document.documentElement;
         root.classList.toggle('light', isLight);
+        root.classList.toggle('dark', !isLight);
         /* 抑制初始化过渡闪烁 */
         root.style.setProperty('transition', 'none');
         root.getBoundingClientRect();
@@ -60,6 +61,7 @@ const pageDesc = description || site.description;
         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         var isLight = saved === 'light' || (!saved && !prefersDark);
         document.documentElement.classList.toggle('light', isLight);
+        document.documentElement.classList.toggle('dark', !isLight);
 
         // 同步 theme-color
         var meta = document.querySelector('meta[name="theme-color"]');

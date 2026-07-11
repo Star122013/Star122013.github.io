@@ -10,6 +10,7 @@
     btn.addEventListener('click', function () {
       var root = document.documentElement;
       var isLight = root.classList.toggle('light');
+      root.classList.toggle('dark', !isLight);
       localStorage.setItem('theme', isLight ? 'light' : 'dark');
 
       // Update theme-color meta for Android
