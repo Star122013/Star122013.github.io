@@ -1,9 +1,9 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
 
 export async function getStaticPaths() {
-  const posts = await getCollection('blog');
+  const posts = await getCollection("blog");
   return posts
     .filter((p) => !p.data.draft)
     .map((post) => ({
@@ -31,7 +31,7 @@ const { title, date, description, tags, body } = post.data;
       {tags && tags.length > 0 && (
         <div class="article-tags">
           {tags.map((tag) => (
-            <a href={`/tags/${encodeURIComponent(tag)}`} class="tag">▸ {tag}</a>
+            <a href={`/tags/${encodeURIComponent(tag)}`} class="tag">{tag}</a>
           ))}
         </div>
       )}
@@ -44,258 +44,280 @@ const { title, date, description, tags, body } = post.data;
 </BaseLayout>
 
 <script data-astro-rerun>
-  (function () {
-    const body = document.querySelector('.article-body');
-    if (!body) return;
+(function () {
+  const body = document.querySelector(".article-body");
+  if (!body) return;
 
-    // ═══ 清理脚注括号 ⋯[<sup>1</sup>] → ⋯<sup>1</sup> ═══
-    // Typst 把 [...] 写在 sup 外面，括号是前后文本节点
-    body.querySelectorAll('sup[role="doc-noteref"]').forEach(function (ref) {
-      var prev = ref.previousSibling;
-      var next = ref.nextSibling;
-      if (prev && prev.nodeType === 3) {
-        prev.textContent = prev.textContent.replace(/\[$/, '');
-      }
-      if (next && next.nodeType === 3) {
-        next.textContent = next.textContent.replace(/^\]/, '');
-        // 如果只剩空文本则移除
-        if (next.textContent === '') next.remove();
-      }
-    });
+  // ═══ 清理脚注括号 ⋯[<sup>1</sup>] → ⋯<sup>1</sup> ═══
+  // Typst 把 [...] 写在 sup 外面，括号是前后文本节点
+  body.querySelectorAll('sup[role="doc-noteref"]').forEach(function (ref) {
+    var prev = ref.previousSibling;
+    var next = ref.nextSibling;
+    if (prev && prev.nodeType === 3) {
+      prev.textContent = prev.textContent.replace(/\[$/, "");
+    }
+    if (next && next.nodeType === 3) {
+      next.textContent = next.textContent.replace(/^\]/, "");
+      // 如果只剩空文本则移除
+      if (next.textContent === "") next.remove();
+    }
+  });
 
-    // ═══ 脚注内容 → 侧边注 ═══
-    var endnotes = body.querySelector('section[role="doc-endnotes"]');
-    if (!endnotes) return;
-    var items = endnotes.querySelectorAll('li');
-    if (!items.length) return;
+  // ═══ 脚注内容 → 侧边注 ═══
+  var endnotes = body.querySelector('section[role="doc-endnotes"]');
+  if (!endnotes) return;
+  var items = endnotes.querySelectorAll("li");
+  if (!items.length) return;
 
-    var fnMap = new Map();
-    items.forEach(function (li) { fnMap.set(li.id, li.innerHTML); });
+  var fnMap = new Map();
+  items.forEach(function (li) {
+    fnMap.set(li.id, li.innerHTML);
+  });
 
-    body.querySelectorAll('sup[role="doc-noteref"]').forEach(function (ref) {
-      var href = ref.querySelector('a')?.getAttribute('href');
-      if (!href) return;
-      var html = fnMap.get(href.slice(1));
-      if (!html) return;
+  body.querySelectorAll('sup[role="doc-noteref"]').forEach(function (ref) {
+    var href = ref.querySelector("a")?.getAttribute("href");
+    if (!href) return;
+    var html = fnMap.get(href.slice(1));
+    if (!html) return;
 
-      var note = document.createElement('span');
-      note.className = 'sidenote';
-      note.innerHTML = html;
-      ref.after(note);
-    });
+    var note = document.createElement("span");
+    note.className = "sidenote";
+    note.innerHTML = html;
+    ref.after(note);
+  });
 
-    // ═══ Callout 框：检测 > 开头的段落 → callout 组件 ═══
-    body.querySelectorAll('p').forEach(function (p) {
-      var text = p.textContent || '';
-      var m = text.match(/^>\s*(Tip|Warning|Important|Note|Caution)\s*[:：]?\s*/i);
-      if (!m) return;
+  // ═══ Callout 框：检测 > 开头的段落 → callout 组件 ═══
+  body.querySelectorAll("p").forEach(function (p) {
+    var text = p.textContent || "";
+    var m = text.match(/^>\s*(Tip|Warning|Important|Note|Caution)\s*[:：]?\s*/i);
+    if (!m) return;
 
-      var type = m[1].toLowerCase();
-      var titles = { tip: 'Tip', warning: 'Warning', important: 'Important', note: 'Note', caution: 'Caution' };
-      var icons  = { tip: '💡', warning: '⚠️', important: '❗', note: '📝', caution: '🔥' };
+    var type = m[1].toLowerCase();
+    var titles = {
+      tip: "Tip",
+      warning: "Warning",
+      important: "Important",
+      note: "Note",
+      caution: "Caution",
+    };
+    var icons = { tip: "💡", warning: "⚠️", important: "❗", note: "📝", caution: "🔥" };
 
-      // 去掉 > Type: 前缀
-      p.innerHTML = p.innerHTML.replace(/^>\s*\w+\s*[:：]?\s*/i, '');
+    // 去掉 > Type: 前缀
+    p.innerHTML = p.innerHTML.replace(/^>\s*\w+\s*[:：]?\s*/i, "");
 
-      var div = document.createElement('div');
-      div.className = 'callout';
-      div.setAttribute('data-callout', type);
-      div.innerHTML = '<div class="callout-label"><span class="callout-label-icon">' + icons[type] + '</span><span>' + titles[type] + '</span></div><div class="callout-content">' + p.innerHTML + '</div>';
-      p.parentNode.replaceChild(div, p);
-    });
+    var div = document.createElement("div");
+    div.className = "callout";
+    div.setAttribute("data-callout", type);
+    div.innerHTML =
+      '<div class="callout-label"><span class="callout-label-icon">' +
+      icons[type] +
+      "</span><span>" +
+      titles[type] +
+      '</span></div><div class="callout-content">' +
+      p.innerHTML +
+      "</div>";
+    p.parentNode.replaceChild(div, p);
+  });
 
-    // ═══ 代码块：语言标签 + 复制按钮 ═══
-    body.querySelectorAll('code[data-lang]').forEach(function (code) {
-      var lang = code.getAttribute('data-lang') || '';
+  // ═══ 代码块：语言标签 + 复制按钮 ═══
+  body.querySelectorAll("code[data-lang]").forEach(function (code) {
+    var lang = code.getAttribute("data-lang") || "";
 
-      // 用容器包裹 code，统一外边框
-      var wrapper = document.createElement('div');
-      wrapper.className = 'code-block';
-      code.parentNode.insertBefore(wrapper, code);
-      wrapper.appendChild(code);
+    // 用容器包裹 code，统一外边框
+    var wrapper = document.createElement("div");
+    wrapper.className = "code-block";
+    code.parentNode.insertBefore(wrapper, code);
+    wrapper.appendChild(code);
 
-      // 语言标签（坐落在顶边线上）
-      var langSpan = document.createElement('span');
-      langSpan.className = 'code-lang';
-      langSpan.textContent = lang;
-      wrapper.appendChild(langSpan);
+    // 语言标签（坐落在顶边线上）
+    var langSpan = document.createElement("span");
+    langSpan.className = "code-lang";
+    langSpan.textContent = lang;
+    wrapper.appendChild(langSpan);
 
-      // 复制按钮（右上角，与语言标签左右对称）
-      var copyBtn = document.createElement('button');
-      copyBtn.className = 'code-copy';
-      copyBtn.innerHTML = 'Copy <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
-      copyBtn.setAttribute('aria-label', 'Copy code');
-      copyBtn.addEventListener('click', function () {
-        var text = code.textContent || '';
-        navigator.clipboard.writeText(text).then(function () {
-          copyBtn.innerHTML = 'Copied <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-          setTimeout(function () {
-            copyBtn.innerHTML = 'Copy <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
-          }, 2000);
-        });
+    // 复制按钮（右上角，与语言标签左右对称）
+    var copyBtn = document.createElement("button");
+    copyBtn.className = "code-copy";
+    copyBtn.innerHTML =
+      'Copy <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+    copyBtn.setAttribute("aria-label", "Copy code");
+    copyBtn.addEventListener("click", function () {
+      var text = code.textContent || "";
+      navigator.clipboard.writeText(text).then(function () {
+        copyBtn.innerHTML =
+          'Copied <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+        setTimeout(function () {
+          copyBtn.innerHTML =
+            'Copy <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+        }, 2000);
       });
-      wrapper.appendChild(copyBtn);
     });
-  })();
+    wrapper.appendChild(copyBtn);
+  });
+})();
 </script>
 
 <style>
-  .article {
-    max-width: 95ch;
-    margin: 0 auto;
-    padding: 2rem 1.25rem 4rem;
-  }
-  .article-header {
-    max-width: 65ch;
-    margin: 0 auto 3rem;
-  }
-  .article-title {
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-    font-weight: 750;
-    line-height: 1.2;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.01em;
-  }
-  .article-date {
-    font-size: 0.875em;
-    color: var(--muted-foreground);
-    transition: color 0.3s ease;
-  }
-  .article-desc {
-    margin-top: 0.75rem;
-    color: var(--muted-foreground);
-    font-size: var(--text-sm);
-    transition: color 0.3s ease;
-  }
-  .article-tags {
-    display: flex;
-    gap: 0.4rem;
-    margin-top: 0.75rem;
-  }
-  .article-tags .tag {
-    color: var(--muted-foreground);
-    text-decoration: none;
-    font-size: 0.8em;
-    padding: 0.15em 0.55em;
-    border-radius: 999px;
-    background: var(--muted);
-    border: 1px solid var(--border);
-    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-  }
-  .article-tags .tag:hover {
-    color: var(--accent-foreground);
-    background: var(--accent);
-    border-color: var(--accent);
-    text-decoration: none;
-  }
+.article {
+  max-width: 95ch;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+.article-header {
+  max-width: 65ch;
+  margin: 0 auto 3rem;
+}
+.article-title {
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 750;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+}
+.article-date {
+  font-size: 0.875em;
+  color: var(--muted-foreground);
+  transition: color 0.3s ease;
+}
+.article-desc {
+  margin-top: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  transition: color 0.3s ease;
+}
+.article-tags {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.article-tags .tag {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  font-size: 0.8em;
+  padding: 0.15em 0.55em;
+  border-radius: 999px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+.article-tags .tag:hover {
+  color: var(--accent-foreground);
+  background: var(--accent);
+  border-color: var(--accent);
+  text-decoration: none;
+}
 
-  /* Content column width — 居中，sidenote 通过负 margin 溢出到右侧 */
-  .article-body {
-    max-width: 65ch;
-    margin: 0 auto;
-  }
+/* Content column width — 居中，sidenote 通过负 margin 溢出到右侧 */
+.article-body {
+  max-width: 65ch;
+  margin: 0 auto;
+}
 
+/* Sidenote: floats right, extends into the right margin via negative margin */
+:global(.sidenote) {
+  float: right;
+  clear: right;
+  width: 250px;
+  margin-right: -280px;
+  margin-top: 0;
+  font-size: 0.82em;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  border-left: 2px solid var(--accent);
+  padding-left: 0.75em;
+  opacity: 0.85;
+}
+:global(.sidenote sup) {
+  margin-right: 0.3em;
+}
 
+/* In-text footnote markers — 无括号，accent 色 */
+.article-body :global(sup[role="doc-noteref"]) {
+  font-size: 0.7em;
+  vertical-align: super;
+  line-height: 1;
+  color: var(--accent);
+}
+.article-body :global(sup[role="doc-noteref"] a) {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+.article-body :global(sup[role="doc-noteref"] a:hover) {
+  color: var(--foreground);
+}
 
-  /* Sidenote: floats right, extends into the right margin via negative margin */
+/* Endnotes fallback (no-JS) */
+.article-body :global(section[role="doc-endnotes"]) {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--border);
+  font-size: 0.85em;
+  color: var(--muted-foreground);
+}
+.article-body :global(section[role="doc-endnotes"] ol) {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.article-body :global(section[role="doc-endnotes"] li) {
+  margin-bottom: 0.5em;
+}
+
+/* 代码块：语言标签 + 复制按钮（坐落在顶边线上） */
+.article-body :global(.code-lang),
+.article-body :global(.code-copy) {
+  position: absolute;
+  top: -0.7em;
+  padding: 0.1em 0.5em;
+  font-size: 0.82em;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", "Fira Code", monospace;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.article-body :global(.code-lang) {
+  left: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.article-body :global(.code-copy) {
+  right: 0.8em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.article-body :global(.code-copy:hover) {
+  color: var(--accent-foreground);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 窄屏：sidenote 隐藏，底部端注显示 */
+@media (max-width: 1000px) {
   :global(.sidenote) {
-    float: right;
-    clear: right;
-    width: 250px;
-    margin-right: -280px;
-    margin-top: 0;
-    font-size: 0.82em;
-    line-height: 1.5;
-    color: var(--muted-foreground);
-    border-left: 2px solid var(--accent);
-    padding-left: 0.75em;
-    opacity: 0.85;
+    display: none;
   }
-  :global(.sidenote sup) {
-    margin-right: 0.3em;
-  }
-
-  /* In-text footnote markers — 无括号，accent 色 */
-  .article-body :global(sup[role="doc-noteref"]) {
-    font-size: 0.7em;
-    vertical-align: super;
-    line-height: 1;
-    color: var(--accent);
-  }
-  .article-body :global(sup[role="doc-noteref"] a) {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.15s ease;
-  }
-  .article-body :global(sup[role="doc-noteref"] a:hover) {
-    color: var(--foreground);
-  }
-
-  /* Endnotes fallback (no-JS) */
   .article-body :global(section[role="doc-endnotes"]) {
-    margin-top: 2em;
-    padding-top: 1em;
-    border-top: 1px solid var(--border);
-    font-size: 0.85em;
-    color: var(--muted-foreground);
+    display: block !important;
   }
-  .article-body :global(section[role="doc-endnotes"] ol) {
-    padding: 0;
-    margin: 0;
-    list-style: none;
+}
+/* 宽屏：sidenote 显示，底部端注隐藏 */
+@media (min-width: 1001px) {
+  .article-body :global(section[role="doc-endnotes"]) {
+    display: none;
   }
-  .article-body :global(section[role="doc-endnotes"] li) {
-    margin-bottom: 0.5em;
-  }
-
-  /* 代码块：语言标签 + 复制按钮（坐落在顶边线上） */
-  .article-body :global(.code-lang),
-  .article-body :global(.code-copy) {
-    position: absolute;
-    top: -0.7em;
-    padding: 0.1em 0.5em;
-    font-size: 0.82em;
-    font-weight: 650;
-    line-height: 1.4;
-    color: var(--muted-foreground);
-    font-family: ui-monospace, "Cascadia Code", "SF Mono", "Fira Code", monospace;
-    background: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-  }
-  .article-body :global(.code-lang) {
-    left: 0.8em;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .article-body :global(.code-copy) {
-    right: 0.8em;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.2em;
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-  }
-  .article-body :global(.code-copy:hover) {
-    color: var(--accent-foreground);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-
-  /* 窄屏：sidenote 隐藏，底部端注显示 */
-  @media (max-width: 1000px) {
-    :global(.sidenote) {
-      display: none;
-    }
-    .article-body :global(section[role="doc-endnotes"]) {
-      display: block !important;
-    }
-  }
-  /* 宽屏：sidenote 显示，底部端注隐藏 */
-  @media (min-width: 1001px) {
-    .article-body :global(section[role="doc-endnotes"]) {
-      display: none;
-    }
-  }
+}
 </style>
