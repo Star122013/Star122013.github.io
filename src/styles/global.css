@@ -22,44 +22,45 @@
 }
 
 .dark {
-	--background: #0f172a;
-	--foreground: #e2e8f0;
-	--accent: #60a5fa;
-	--accent-foreground: #0f172a;
-	--card: #1e293b;
-	--card-foreground: #e2e8f0;
-	--popover: #1e293b;
-	--popover-foreground: #e2e8f0;
-	--primary: #e2e8f0;
-	--primary-foreground: #0f172a;
-	--secondary: #1e293b;
-	--secondary-foreground: #e2e8f0;
-	--muted: #1e293b;
-	--muted-foreground: #94a3b8;
-	--border: #334155;
-	--input: #334155;
-	--ring: #60a5fa;
+	/* Kanagawa Dragon — 暖色低对比暗色主题 */
+	--background: #181616; /* dragonBlack3 */
+	--foreground: #c5c9c5; /* dragonWhite */
+	--accent: #8ba4b0; /* dragonBlue2 */
+	--accent-foreground: #181616;
+	--card: #1d1c19; /* dragonBlack2 */
+	--card-foreground: #c5c9c5;
+	--popover: #1d1c19;
+	--popover-foreground: #c5c9c5;
+	--primary: #c5c9c5;
+	--primary-foreground: #181616;
+	--secondary: #282727; /* dragonBlack4 */
+	--secondary-foreground: #c5c9c5;
+	--muted: #282727;
+	--muted-foreground: #a6a69c; /* dragonGray */
+	--border: #393836; /* dragonBlack5 */
+	--input: #393836;
+	--ring: #8ba4b0;
 }
 
 @media (prefers-color-scheme: dark) {
 	:root:not(.light) {
-		--background: #0f172a;
-		--foreground: #e2e8f0;
-		--accent: #60a5fa;
-		--accent-foreground: #0f172a;
-		--card: #1e293b;
-		--card-foreground: #e2e8f0;
-		--popover: #1e293b;
-		--popover-foreground: #e2e8f0;
-		--primary: #e2e8f0;
-		--primary-foreground: #0f172a;
-		--secondary: #1e293b;
-		--secondary-foreground: #e2e8f0;
-		--muted: #1e293b;
-		--muted-foreground: #94a3b8;
-		--border: #334155;
-		--input: #334155;
-		--ring: #60a5fa;
+		--background: #181616;
+		--foreground: #c5c9c5;
+		--accent: #8ba4b0;
+		--accent-foreground: #181616;
+		--card: #1d1c19;
+		--card-foreground: #c5c9c5;
+		--popover: #1d1c19;
+		--popover-foreground: #c5c9c5;
+		--primary: #c5c9c5;
+		--primary-foreground: #181616;
+		--secondary: #282727;
+		--secondary-foreground: #c5c9c5;
+		--muted: #282727;
+		--muted-foreground: #a6a69c;
+		--border: #393836;
+		--input: #393836;
+		--ring: #8ba4b0;
 	}
 }
 
@@ -207,8 +208,13 @@ img {
 .prose math {
 	font-size: var(--text-base);
 }
+/* 注意：不能在这里设置 display: block。
+ * Chromium 的 MathML 布局依赖 UA 样式表中 `display: block math` 这个特殊值，
+ * 一旦被 author CSS 覆盖成普通 `display: block`，<math> 就会退化为普通块盒，
+ * 所有子元素（mi/mo/msup/…）会变成全宽块级元素垂直堆叠（公式错位）。
+ * Firefox 的 MathML 布局不依赖该值，所以只有 Chrome 出问题。
+ * `display="block"` 属性本身已由浏览器 UA 样式表处理（含居中）。 */
 .prose math[display="block"] {
-	display: block;
 	text-align: center;
 	margin: 1.5em 0;
 	overflow-x: auto;
@@ -359,22 +365,22 @@ img {
 }
 
 .dark .callout[data-callout="tip"] {
-	background: #14532d;
-	color: #bbf7d0;
+	background: #2b3328; /* winterGreen */
+	color: #87a987; /* dragonGreen */
 }
 .dark .callout[data-callout="warning"] {
-	background: #451a03;
-	color: #fde68a;
+	background: #49443c; /* winterYellow */
+	color: #c4b28a; /* dragonYellow */
 }
 .dark .callout[data-callout="important"] {
-	background: #450a0a;
-	color: #fecaca;
+	background: #43242b; /* winterRed */
+	color: #c4746e; /* dragonRed */
 }
 .dark .callout[data-callout="caution"] {
-	background: #431407;
-	color: #fed7aa;
+	background: #43392b;
+	color: #b6927b; /* dragonOrange */
 }
 .dark .callout[data-callout="note"] {
-	background: #172554;
-	color: #bfdbfe;
+	background: #223249; /* waveBlue1 */
+	color: #8ba4b0; /* dragonBlue2 */
 }
