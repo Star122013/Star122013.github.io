@@ -73,8 +73,33 @@ const pageDesc = description || site.description;
 
     <script>
     document.addEventListener("astro:after-swap", function () {
-      // 主题由 ThemePicker 的 data-astro-rerun 脚本在新页面重新应用，
-      // 这里只需同步 theme-color
+      // View Transitions 会用新文档属性覆盖 <html>，data-theme 会被清掉；
+      // 导航完成后从这里从 localStorage 恢复主题（ThemePicker 的
+      // data-astro-rerun 脚本也会恢复，双保险）
+      const THEMES = [
+        "astropaper-light",
+        "rosepine-light",
+        "rosepine-dark",
+        "catppuccin-light",
+        "catppuccin-dark",
+        "kanagawa-light",
+        "kanagawa-dark",
+        "gruvbox-light",
+        "gruvbox-dark",
+      ];
+      const root = document.documentElement;
+      let saved = null;
+      try {
+        saved = localStorage.getItem("theme");
+      } catch (e) {}
+      const theme = THEMES.indexOf(saved) !== -1 ? saved : null;
+      if (theme) {
+        root.setAttribute("data-theme", theme);
+      } else {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        root.setAttribute("data-theme", prefersDark ? "kanagawa-dark" : "astropaper-light");
+      }
+      // 同步 theme-color
       var meta = document.querySelector('meta[name="theme-color"]');
       if (meta) {
         var bg = getComputedStyle(document.body).backgroundColor;

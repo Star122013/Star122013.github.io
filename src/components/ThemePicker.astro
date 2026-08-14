@@ -68,10 +68,43 @@ const ids = themes.map((t) => t.id);
   </div>
 </div>
 
-<script data-astro-rerun define:vars={{ themeIds: ids }}>
+<script data-astro-rerun>
+// 注意：不能用 define:vars —— 它会让 Astro 把脚本转成内联脚本、丢掉
+// data-astro-rerun 属性，导致 View Transitions 导航后事件不重新绑定。
+// 主题列表与 global.css 的 [data-theme=...] 块、上方 themes 数组保持一致。
 (function () {
-  const THEMES = { ids: themeIds };
+  const THEMES = {
+    ids: [
+      "astropaper-light",
+      "rosepine-light",
+      "rosepine-dark",
+      "catppuccin-light",
+      "catppuccin-dark",
+      "kanagawa-light",
+      "kanagawa-dark",
+      "gruvbox-light",
+      "gruvbox-dark",
+    ],
+  };
   const ROOT = document.documentElement;
+
+  // View Transitions 会用新文档的属性覆盖 <html>，data-theme 会被清掉，
+  // 这里在脚本每次（重）执行时从 localStorage 恢复主题。
+  function restoreTheme() {
+    let saved = null;
+    try {
+      saved = localStorage.getItem("theme");
+    } catch (e) {}
+    const theme = THEMES.ids.indexOf(saved) !== -1 ? saved : null;
+    if (!theme) {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      ROOT.setAttribute("data-theme", prefersDark ? "kanagawa-dark" : "astropaper-light");
+    } else {
+      ROOT.setAttribute("data-theme", theme);
+    }
+  }
+
+  restoreTheme();
 
   function currentTheme() {
     return ROOT.getAttribute("data-theme") || "astropaper-light";
