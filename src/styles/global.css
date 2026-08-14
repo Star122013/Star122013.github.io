@@ -445,8 +445,10 @@ img {
 }
 
 /* ===== 通用页面标题（About, Search, Tags 等共用） ===== */
-.page {
-	padding: 3rem 0;
+.page.container {
+	/* .page 与 .container 同特异性，.container 定义在后会覆盖 .page 的 padding；
+	 * 用复合选择器提高特异性，确保页面顶部/底部有留白（否则内容顶着 sticky header） */
+	padding: 3rem 1.25rem;
 }
 .page h1 {
 	font-size: var(--text-3xl);

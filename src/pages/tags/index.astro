@@ -2,10 +2,11 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 
-// ── 数据构建：图谱的节点与边 ──────────────────────────────────
-// 节点 = Tag（标签）+ Post（文章）；边 = Post → 它的每个 Tag。
-// JSON 挂在页面 <script type="application/json"> 里，前端 d3-force 读取。
-// 不用 define:vars，避免脚本被 Astro 内联化而丢失 data-astro-rerun。
+// ── Build graph data: nodes and edges ──────────────────────────
+// Nodes = Tags + Posts; edges = Post -> each of its Tags.
+// Serialized into a <script type="application/json"> element and read
+// by d3-force on the client. Avoid define:vars so the script isn't
+// inlined (which would drop data-astro-rerun).
 
 const posts = (await getCollection("blog"))
   .filter((p) => !p.data.draft)
@@ -51,7 +52,7 @@ for (const post of posts) {
   }
 }
 
-// 标签节点大小 = 文章数（关联越多越突出）
+// Tag node size = number of attached posts (more related, more prominent)
 const tagWeight = new Map<string, number>();
 for (const l of links) {
   const tag = nodes.find((n) => n.id === l.target);
@@ -67,7 +68,10 @@ const graphData = JSON.stringify({ nodes, links });
 <BaseLayout title="Tags">
   <div class="page container graph-page">
     <h1>Tags</h1>
-    <p class="hint">标签居中 · 文章环绕 · 拖拽节点 · 滚轮缩放 · 悬停高亮关联 · 点击跳转</p>
+    <p class="hint">
+      Tags centered · Posts orbiting · Drag nodes · Scroll to zoom · Hover to highlight · Click to
+      navigate
+    </p>
 
     {nodes.length > 0 ? (
       <div class="graph-wrap">
@@ -85,11 +89,12 @@ const graphData = JSON.stringify({ nodes, links });
 </BaseLayout>
 
 <script>
-// ── 力导向图谱（Obsidian graph view 风格）──────────────────
-// 布局用 d3-force；本脚本会被 Astro 打包成外部 module（import 正常解析）。
-// 不在 script 里用 data-astro-rerun：那会让 Astro 保持内联、import 失效。
-// 改为注册 astro:after-swap 监听，View Transitions 导航后重新初始化。
-// 不画箭头：边是纯线段，无方向箭头。
+// ── Force-directed tag graph (Obsidian graph-view style) ────────
+// Layout via d3-force; this script is bundled by Astro into an external
+// module (so import resolves normally). Do NOT use data-astro-rerun here:
+// it would keep the script inline and break the import. Instead we listen
+// for astro:after-swap and re-initialize after view-transition navigations.
+// No arrows: edges are plain segments without directional markers.
 import * as d3force from "d3-force";
 
 function initGraph() {
@@ -106,7 +111,7 @@ function initGraph() {
   }
   if (!data.nodes || !data.links || !data.nodes.length) return;
 
-  // 导航后重跑时先清掉旧图
+  // Clear any previous graph when re-running after navigation
   svg.textContent = "";
 
   const wrap = svg.parentElement;
@@ -114,7 +119,7 @@ function initGraph() {
   const H = wrap ? wrap.clientHeight : 600;
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
 
-  // 读取主题变量（图谱颜色跟随主题）
+  // Read theme variables so the graph follows the active theme
   const cs = getComputedStyle(document.documentElement);
   const accent = cs.getPropertyValue("--accent").trim() || "#888";
   const fg = cs.getPropertyValue("--foreground").trim() || "#333";
@@ -135,15 +140,16 @@ function initGraph() {
   const nodes = data.nodes.map((n) => ({ ...n }));
   const links = data.links.map((l) => ({ source: l.source, target: l.target }));
 
-  // ── 确定性锚点布局：标签在中心、文章围一圈的放射状 ──
-  // 标签放中心小环；文章放外圈，角度 = 其标签角度的均值，
-  // 使连线朝圆心收敛、尽量不交叉，一眼看清文章挂在哪些标签下。
+  // ── Deterministic anchors: tags centered, posts orbiting ──
+  // Tags sit on a small central ring; each post sits on the outer ring at
+  // the mean angle of its tag anchors. Lines converge toward the center and
+  // barely cross, so it's easy to see which posts hang under which tags.
   const cx = W / 2;
   const cy = H / 2;
   const tagNodes = nodes.filter((n) => n.kind === "tag");
   const postNodes = nodes.filter((n) => n.kind === "post");
 
-  // 中心环半径：随标签数量稍微放大，给文字留空间
+  // Central ring radius: grows slightly with tag count to leave room for labels
   const Rtag = Math.max(56, Math.min(W, H) * (tagNodes.length > 4 ? 0.2 : 0.16));
   tagNodes.forEach((n, i) => {
     const angle = (2 * Math.PI * i) / Math.max(tagNodes.length, 1) - Math.PI / 2;
@@ -152,7 +158,7 @@ function initGraph() {
     n.angle = angle;
   });
 
-  // 外圈半径（文章）：之前的圆环半径
+  // Outer ring radius for posts
   const Rout = Math.min(W, H) * 0.36;
   postNodes.forEach((n, i) => {
     const related = links.filter((l) => l.source === n.id || l.target === n.id);
@@ -161,7 +167,7 @@ function initGraph() {
       .map((id) => nodes.find((x) => x.id === id))
       .filter(Boolean)
       .map((t) => t.angle);
-    // 多个标签取角度均值（避免 350°+10° 平均出 180° 的循环边界问题）
+    // Mean of multiple tag angles (atan2 avoids the 350°+10°->180° wraparound bug)
     const angle =
       angles.length > 0
         ? Math.atan2(
@@ -173,10 +179,10 @@ function initGraph() {
     n.ty = cy + Rout * Math.sin(angle);
   });
 
-  // 节点统一大小（文章/标签同体型，用颜色区分类型），不搞大小分级
+  // Uniform node size (posts and tags look the same; type is told apart by color)
   const rOf = () => 8;
 
-  // ── 力模拟：锚点为主、连线为辅，快速收敛，避免拖拽后“甩” ──
+  // ── Simulation: anchored positions dominate, links assist, fast settle ──
   const simulation = d3force
     .forceSimulation(nodes)
     .force(
@@ -196,11 +202,11 @@ function initGraph() {
         .radius((d) => rOf(d) + 14)
         .strength(0.9),
     )
-    .velocityDecay(0.6) // 速度衰减大 → 振荡快速平息
+    .velocityDecay(0.6) // high velocity decay -> oscillation dies quickly
     .alpha(1)
-    .alphaDecay(0.06); // 收敛快 → 初始布局几帧内完成，拖拽后不反弹
+    .alphaDecay(0.06); // fast convergence: initial layout settles in a few frames, no bounce after drag
 
-  // 画边
+  // Draw edges
   const linkSel = [];
   for (const l of links) {
     const line = document.createElementNS(svgNS, "line");
@@ -211,9 +217,11 @@ function initGraph() {
     linkSel.push({ el: line, data: l });
   }
 
-  // 画节点
-  // 拖拽状态放在循环外（全局），mousemove/mouseup 统一挂在 window 上：
-  // 节点只有 8px，鼠标一移出节点事件就丢，所以移动/松手必须依赖全局事件。
+  // Draw nodes
+  // Drag state lives outside the loop (global). mousemove/mouseup are bound
+  // once on window: nodes are only 8px, so once the pointer leaves a node the
+  // per-node handlers would stop firing. Moving/releasing must rely on global
+  // events.
   let dragNode = null;
   let dragged = false;
   let startX = 0;
@@ -229,7 +237,7 @@ function initGraph() {
     circle.setAttribute("opacity", d.kind === "post" ? "0.9" : "0.8");
     g.appendChild(circle);
 
-    // tag 节点显示名字；post 节点悬停显示标题
+    // Tag nodes show their name; post nodes show the title on hover
     if (d.kind === "tag") {
       const text = document.createElementNS(svgNS, "text");
       text.setAttribute("dy", rOf(d) + 13);
@@ -244,7 +252,7 @@ function initGraph() {
       g.appendChild(tip);
     }
 
-    // 按下：记录候选拖拽（先不启动模拟，等真的拖动再说）
+    // Mouse down: record a drag candidate (simulation not started yet)
     g.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       dragged = false;
@@ -255,7 +263,7 @@ function initGraph() {
       d.fy = d.y;
     });
 
-    // 悬停高亮：自身 + 邻居亮，其余淡
+    // Hover highlight: brighten self + neighbors, dim the rest
     g.addEventListener("mouseenter", () => hoverNode(d));
     g.addEventListener("mouseleave", () => hoverNode(null));
 
@@ -263,18 +271,18 @@ function initGraph() {
     return { el: g, data: d };
   });
 
-  // 平移 / 缩放状态
+  // Pan / zoom state
   const pan = { k: 1, x: 0, y: 0 };
   function applyTransform() {
     view.setAttribute("transform", "translate(" + pan.x + "," + pan.y + ") scale(" + pan.k + ")");
   }
 
-  // 空白按下：开始平移
+  // Press on empty canvas to start panning
   let panning = false;
   let px = 0;
   let py = 0;
 
-  // 悬停
+  // Hover
   function hoverNode(d) {
     const neighbors = new Set();
     if (d) {
@@ -296,24 +304,24 @@ function initGraph() {
     }
   }
 
-  // ── 全局鼠标事件（注册一次，导航重跑时先移除旧的）──
+  // ── Global mouse handlers (registered once; old ones removed on re-runs) ──
   const onMove = (e) => {
-    // 拖节点
+    // Dragging a node
     if (dragNode) {
       if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 3) {
         dragged = true;
         movedByDrag = true;
       }
       if (dragged) {
-        // 缓存 svg 位置，避免每个 mousemove 都触发 reflow
+        // Cache the svg rect to avoid a reflow on every mousemove
         const rect = svg.getBoundingClientRect();
         dragNode.fx = (e.clientX - rect.left - pan.x) / pan.k;
         dragNode.fy = (e.clientY - rect.top - pan.y) / pan.k;
-        // 让其他节点轻让开；fx/fy 直接驱动被拖节点本身
+        // Let other nodes drift aside; fx/fy drive the dragged node itself
         simulation.alpha(0.25).restart();
       }
     }
-    // 平移画布
+    // Pan the canvas
     if (panning) {
       pan.x += e.clientX - px;
       pan.y += e.clientY - py;
@@ -327,13 +335,13 @@ function initGraph() {
       const d = dragNode;
       dragNode = null;
       if (movedByDrag) {
-        // 拖过：节点永久固定在此处（Obsidian 风格），并停止模拟，
-        // 避免 link/collide 力在松手后把节点拉走（“甩”）
+        // Dragged: pin the node where it was dropped (Obsidian style) and stop
+        // the simulation so link/collide forces can't yank it back ("sling").
         d.fx = d.x;
         d.fy = d.y;
         simulation.stop();
       } else {
-        // 纯点击：跳转
+        // Plain click: navigate
         window.location.href = d.href;
       }
       dragged = false;
@@ -346,7 +354,7 @@ function initGraph() {
   window.addEventListener("mousemove", onMove);
   window.addEventListener("mouseup", onUp);
 
-  // 空白按下：开始平移
+  // Press on empty canvas to start panning
   svg.addEventListener("mousedown", (e) => {
     if (e.target !== svg && e.target !== gLinks) return;
     panning = true;
@@ -354,7 +362,7 @@ function initGraph() {
     py = e.clientY;
   });
 
-  // 滚轮缩放（以鼠标为中心）
+  // Wheel zoom (anchored at the pointer)
   svg.addEventListener(
     "wheel",
     (e) => {
@@ -372,7 +380,7 @@ function initGraph() {
     { passive: false },
   );
 
-  // 每帧更新位置
+  // Update positions on every tick
   simulation.on("tick", () => {
     for (const { el, data: d } of nodeSel) {
       el.setAttribute("transform", "translate(" + d.x + "," + d.y + ")");
@@ -389,7 +397,7 @@ function initGraph() {
 }
 
 initGraph();
-// View Transitions 导航后重新初始化（如从文章页切到 Tags 页）
+// Re-initialize after view-transition navigation (e.g. article page -> Tags)
 document.addEventListener("astro:after-swap", () => {
   initGraph();
 });

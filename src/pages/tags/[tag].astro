@@ -21,8 +21,11 @@ const filtered = posts
 ---
 
 <BaseLayout title={`#${tag}`}>
-  <div class="page container">
-    <h1><span style="font-weight: 300;"># {tag}</span></h1>
+  <div class="page container tag-page">
+    <div class="title-row">
+      <h1>{tag}</h1>
+      <a href="/tags" class="back-link">Back to tags</a>
+    </div>
     <p class="count">{filtered.length} post{filtered.length !== 1 ? 's' : ''}</p>
 
     <section class="posts">
@@ -32,8 +35,26 @@ const filtered = posts
 </BaseLayout>
 
 <style>
-.page h1 {
+.title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 0.25rem;
+}
+.title-row h1 {
+  margin-bottom: 0;
+}
+.back-link {
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.back-link:hover {
+  color: var(--foreground);
+  text-decoration: underline;
 }
 .count {
   color: var(--muted-foreground);
