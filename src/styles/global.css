@@ -1,6 +1,11 @@
-/* ===== 源于 AstroPaper 灵感的配色方案 ===== */
+/* ═══════════════════════════════════════════════════════════════
+ * 颜色统一管理区：所有色值只在这里定义，组件/页面一律用 var() 引用
+ * 语义层变量（--background 等）切主题时整体换值；
+ * 功能层变量（--syntax-*、--callout-*）基于语义层派生或单独定义。
+ * ═══════════════════════════════════════════════════════════════ */
 
 :root {
+	/* ── 语义层：Light ── */
 	--background: #fcfcfc;
 	--foreground: #1a1a2e;
 	--accent: #2563eb;
@@ -19,10 +24,33 @@
 	--input: #e2e8f0;
 	--ring: #2563eb;
 	--radius: 0.5rem;
+
+	/* ── 功能层：代码高亮（Light）── */
+	--syntax-keyword: #d73948;
+	--syntax-function: #4b69c6;
+	--syntax-property: #8b41b1;
+	--syntax-number: #b60157;
+	--syntax-string: #198810;
+	--syntax-comment: #74747c;
+	--syntax-macro: #16718d;
+	--syntax-plain: inherit;
+	--code-bg: #ffffff;
+
+	/* ── 功能层：Callout（Light）── */
+	--callout-tip-bg: #dcfce7;
+	--callout-tip-fg: #166534;
+	--callout-warning-bg: #fef3c7;
+	--callout-warning-fg: #92400e;
+	--callout-important-bg: #fee2e2;
+	--callout-important-fg: #991b1b;
+	--callout-caution-bg: #ffedd5;
+	--callout-caution-fg: #9a3412;
+	--callout-note-bg: #dbeafe;
+	--callout-note-fg: #1e40af;
 }
 
 .dark {
-	/* Kanagawa Dragon — 暖色低对比暗色主题 */
+	/* ── 语义层：Kanagawa Dragon（暖色低对比）── */
 	--background: #181616; /* dragonBlack3 */
 	--foreground: #c5c9c5; /* dragonWhite */
 	--accent: #8ba4b0; /* dragonBlue2 */
@@ -40,10 +68,34 @@
 	--border: #393836; /* dragonBlack5 */
 	--input: #393836;
 	--ring: #8ba4b0;
+
+	/* ── 功能层：代码高亮（Dragon）── */
+	--syntax-keyword: #ff7b93;
+	--syntax-function: #7eb3e0;
+	--syntax-property: #c7a0e0;
+	--syntax-number: #ff8fae;
+	--syntax-string: #9ece6a;
+	--syntax-comment: #a6a69c;
+	--syntax-macro: #7dcfff;
+	--syntax-plain: inherit;
+	--code-bg: #1d1c19;
+
+	/* ── 功能层：Callout（Dragon）── */
+	--callout-tip-bg: #2b3328; /* winterGreen */
+	--callout-tip-fg: #87a987; /* dragonGreen */
+	--callout-warning-bg: #49443c; /* winterYellow */
+	--callout-warning-fg: #c4b28a; /* dragonYellow */
+	--callout-important-bg: #43242b; /* winterRed */
+	--callout-important-fg: #c4746e; /* dragonRed */
+	--callout-caution-bg: #43392b;
+	--callout-caution-fg: #b6927b; /* dragonOrange */
+	--callout-note-bg: #223249; /* waveBlue1 */
+	--callout-note-fg: #8ba4b0; /* dragonBlue2 */
 }
 
 @media (prefers-color-scheme: dark) {
 	:root:not(.light) {
+		/* 与 .dark 相同的 Dragon 值（系统暗色偏好，无 JS 切换时生效） */
 		--background: #181616;
 		--foreground: #c5c9c5;
 		--accent: #8ba4b0;
@@ -61,6 +113,24 @@
 		--border: #393836;
 		--input: #393836;
 		--ring: #8ba4b0;
+		--syntax-keyword: #ff7b93;
+		--syntax-function: #7eb3e0;
+		--syntax-property: #c7a0e0;
+		--syntax-number: #ff8fae;
+		--syntax-string: #9ece6a;
+		--syntax-comment: #a6a69c;
+		--syntax-macro: #7dcfff;
+		--code-bg: #1d1c19;
+		--callout-tip-bg: #2b3328;
+		--callout-tip-fg: #87a987;
+		--callout-warning-bg: #49443c;
+		--callout-warning-fg: #c4b28a;
+		--callout-important-bg: #43242b;
+		--callout-important-fg: #c4746e;
+		--callout-caution-bg: #43392b;
+		--callout-caution-fg: #b6927b;
+		--callout-note-bg: #223249;
+		--callout-note-fg: #8ba4b0;
 	}
 }
 
@@ -299,7 +369,7 @@ img {
 	margin: 1.5em 0;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	background: var(--card);
+	background: var(--code-bg);
 }
 
 .code-block code[data-lang] {
@@ -315,6 +385,26 @@ img {
 	border: none;
 	border-radius: 0;
 }
+
+/* ═══ 代码高亮：把 Typst 输出的固定内联色映射到主题变量 ═══
+ * Typst 0.15 HTML 导出写死 `style="color: #xxx"`，无法随明暗主题切换。
+ * 用属性选择器 + !important 覆盖为 var(--syntax-*)，色值集中在顶部变量区。
+ * 映射表（Typst 默认主题 → 语义）：
+ *   #d73948 关键字/操作符/类型 → --syntax-keyword
+ *   #4b69c6 函数/标识符      → --syntax-function
+ *   #8b41b1 属性/标签/插值   → --syntax-property
+ *   #b60157 数字/常量        → --syntax-number
+ *   #198810 字符串/字面量    → --syntax-string
+ *   #74747c 注释             → --syntax-comment
+ *   #16718d 宏/内置调用      → --syntax-macro
+ */
+.code-block span[style*="#d73948"] { color: var(--syntax-keyword) !important; }
+.code-block span[style*="#4b69c6"] { color: var(--syntax-function) !important; }
+.code-block span[style*="#8b41b1"] { color: var(--syntax-property) !important; }
+.code-block span[style*="#b60157"] { color: var(--syntax-number) !important; }
+.code-block span[style*="#198810"] { color: var(--syntax-string) !important; }
+.code-block span[style*="#74747c"] { color: var(--syntax-comment) !important; }
+.code-block span[style*="#16718d"] { color: var(--syntax-macro) !important; }
 
 /* ===== Callout 框 ===== */
 .callout {
@@ -342,45 +432,24 @@ img {
 .callout-content p:first-child { margin-top: 0; }
 .callout-content p:last-child  { margin-bottom: 0; }
 
-/* Callout 类型颜色 — 背景充满，文字用深色保证可读 */
+/* Callout 类型颜色 — 色值集中在顶部变量区（--callout-*），此处仅引用 */
 .callout[data-callout="tip"] {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--callout-tip-bg);
+	color: var(--callout-tip-fg);
 }
 .callout[data-callout="warning"] {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--callout-warning-bg);
+	color: var(--callout-warning-fg);
 }
 .callout[data-callout="important"] {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--callout-important-bg);
+	color: var(--callout-important-fg);
 }
 .callout[data-callout="caution"] {
-	background: #ffedd5;
-	color: #9a3412;
+	background: var(--callout-caution-bg);
+	color: var(--callout-caution-fg);
 }
 .callout[data-callout="note"] {
-	background: #dbeafe;
-	color: #1e40af;
-}
-
-.dark .callout[data-callout="tip"] {
-	background: #2b3328; /* winterGreen */
-	color: #87a987; /* dragonGreen */
-}
-.dark .callout[data-callout="warning"] {
-	background: #49443c; /* winterYellow */
-	color: #c4b28a; /* dragonYellow */
-}
-.dark .callout[data-callout="important"] {
-	background: #43242b; /* winterRed */
-	color: #c4746e; /* dragonRed */
-}
-.dark .callout[data-callout="caution"] {
-	background: #43392b;
-	color: #b6927b; /* dragonOrange */
-}
-.dark .callout[data-callout="note"] {
-	background: #223249; /* waveBlue1 */
-	color: #8ba4b0; /* dragonBlue2 */
+	background: var(--callout-note-bg);
+	color: var(--callout-note-fg);
 }
