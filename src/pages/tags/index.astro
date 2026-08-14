@@ -67,7 +67,7 @@ const graphData = JSON.stringify({ nodes, links });
 <BaseLayout title="Tags">
   <div class="page container graph-page">
     <h1>Tags</h1>
-    <p class="hint">标签围圈、文章居中 · 拖拽节点 · 滚轮缩放 · 悬停高亮关联 · 点击跳转</p>
+    <p class="hint">标签居中 · 文章环绕 · 拖拽节点 · 滚轮缩放 · 悬停高亮关联 · 点击跳转</p>
 
     {nodes.length > 0 ? (
       <div class="graph-wrap">
@@ -135,39 +135,48 @@ function initGraph() {
   const nodes = data.nodes.map((n) => ({ ...n }));
   const links = data.links.map((l) => ({ source: l.source, target: l.target }));
 
-  // ── 确定性锚点布局（每次打开图都一样，不随机漂移）──
-  // 标签均匀放在一个圆环上；文章放在自己关联标签的质心（圆内）。
-  // 这样「分两类一眼看清、文章连到自己的标签」的语义最直接。
+  // ── 确定性锚点布局：标签在中心、文章围一圈的放射状 ──
+  // 标签放中心小环；文章放外圈，角度 = 其标签角度的均值，
+  // 使连线朝圆心收敛、尽量不交叉，一眼看清文章挂在哪些标签下。
   const cx = W / 2;
   const cy = H / 2;
-  const R = Math.min(W, H) * 0.36;
   const tagNodes = nodes.filter((n) => n.kind === "tag");
+  const postNodes = nodes.filter((n) => n.kind === "post");
+
+  // 中心环半径：随标签数量稍微放大，给文字留空间
+  const Rtag = Math.max(56, Math.min(W, H) * (tagNodes.length > 4 ? 0.2 : 0.16));
   tagNodes.forEach((n, i) => {
     const angle = (2 * Math.PI * i) / Math.max(tagNodes.length, 1) - Math.PI / 2;
-    n.tx = cx + R * Math.cos(angle);
-    n.ty = cy + R * Math.sin(angle);
+    n.tx = cx + Rtag * Math.cos(angle);
+    n.ty = cy + Rtag * Math.sin(angle);
+    n.angle = angle;
   });
-  // 文章锚点 = 它关联标签锚点的质心，再往圆心收一点避开标签文字
-  for (const n of nodes) {
-    if (n.kind !== "post") continue;
+
+  // 外圈半径（文章）：之前的圆环半径
+  const Rout = Math.min(W, H) * 0.36;
+  postNodes.forEach((n, i) => {
     const related = links.filter((l) => l.source === n.id || l.target === n.id);
-    const tagAnchors = related
+    const angles = related
       .map((l) => (l.source === n.id ? l.target : l.source))
       .map((id) => nodes.find((x) => x.id === id))
-      .filter(Boolean);
-    if (tagAnchors.length) {
-      n.tx = cx + (tagAnchors.reduce((s, t) => s + t.tx, 0) / tagAnchors.length - cx) * 0.45;
-      n.ty = cy + (tagAnchors.reduce((s, t) => s + t.ty, 0) / tagAnchors.length - cy) * 0.45;
-    } else {
-      n.tx = cx;
-      n.ty = cy;
-    }
-  }
+      .filter(Boolean)
+      .map((t) => t.angle);
+    // 多个标签取角度均值（避免 350°+10° 平均出 180° 的循环边界问题）
+    const angle =
+      angles.length > 0
+        ? Math.atan2(
+            angles.reduce((s, a) => s + Math.sin(a), 0) / angles.length,
+            angles.reduce((s, a) => s + Math.cos(a), 0) / angles.length,
+          )
+        : (2 * Math.PI * i) / Math.max(postNodes.length, 1) - Math.PI / 2;
+    n.tx = cx + Rout * Math.cos(angle);
+    n.ty = cy + Rout * Math.sin(angle);
+  });
 
   // 节点统一大小（文章/标签同体型，用颜色区分类型），不搞大小分级
   const rOf = () => 8;
 
-  // ── 力模拟：弱锚定 + 松连接，让节点从锚点平滑就位并保持不重叠 ──
+  // ── 力模拟：锚点为主、连线为辅，快速收敛，避免拖拽后“甩” ──
   const simulation = d3force
     .forceSimulation(nodes)
     .force(
@@ -175,11 +184,11 @@ function initGraph() {
       d3force
         .forceLink(links)
         .id((d) => d.id)
-        .distance(70)
-        .strength(0.5),
+        .distance(60)
+        .strength(0.35),
     )
-    .force("x", d3force.forceX((d) => d.tx).strength(0.1))
-    .force("y", d3force.forceY((d) => d.ty).strength(0.1))
+    .force("x", d3force.forceX((d) => d.tx).strength(0.3))
+    .force("y", d3force.forceY((d) => d.ty).strength(0.3))
     .force(
       "collide",
       d3force
@@ -187,8 +196,9 @@ function initGraph() {
         .radius((d) => rOf(d) + 14)
         .strength(0.9),
     )
+    .velocityDecay(0.6) // 速度衰减大 → 振荡快速平息
     .alpha(1)
-    .alphaDecay(0.03);
+    .alphaDecay(0.06); // 收敛快 → 初始布局几帧内完成，拖拽后不反弹
 
   // 画边
   const linkSel = [];
@@ -240,7 +250,6 @@ function initGraph() {
       dragNode = d;
       d.fx = d.x;
       d.fy = d.y;
-      simulation.alphaTarget(0.3).restart();
     });
     g.addEventListener("mousemove", (e) => {
       if (!dragNode || dragNode !== d) return;
@@ -251,15 +260,26 @@ function initGraph() {
       const rect = svg.getBoundingClientRect();
       d.fx = (e.clientX - rect.left - pan.x) / pan.k;
       d.fy = (e.clientY - rect.top - pan.y) / pan.k;
-      simulation.alphaTarget(0.3).restart();
+      // 单次加热而不是 alphaTarget（避免每个 mousemove 都持续加热导致抖动）；
+      // 节点位置由 fx/fy 直接驱动，模拟只负责把其他节点轻轻让开。
+      simulation.alpha(0.25).restart();
     });
     g.addEventListener("mouseup", () => {
       if (!dragNode || dragNode !== d) return;
-      d.fx = d.x;
-      d.fy = d.y;
       dragNode = null;
       simulation.alphaTarget(0);
-      if (!dragged) window.location.href = d.href;
+      // 让模拟在 alphaDecay(0.06) 下很快自行停住（alpha 降到下限即自动停止），
+      // 不要 stop()，否则后续拖拽的 restart() 无 alpha 可跑。
+      if (dragged) {
+        // 拖过：原地固定（Obsidian 风格），并更新锚点避免松手后弹回
+        d.tx = d.x;
+        d.ty = d.y;
+        d.fx = null;
+        d.fy = null;
+      } else {
+        // 纯点击：跳转
+        window.location.href = d.href;
+      }
     });
 
     // 悬停高亮：自身 + 邻居亮，其余淡
