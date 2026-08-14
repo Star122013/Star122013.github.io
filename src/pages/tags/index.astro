@@ -67,7 +67,7 @@ const graphData = JSON.stringify({ nodes, links });
 <BaseLayout title="Tags">
   <div class="page container graph-page">
     <h1>Tags</h1>
-    <p class="hint">拖拽节点 · 滚轮缩放 · 空白拖拽平移 · 悬停高亮关联 · 点击跳转</p>
+    <p class="hint">标签围圈、文章居中 · 拖拽节点 · 滚轮缩放 · 悬停高亮关联 · 点击跳转</p>
 
     {nodes.length > 0 ? (
       <div class="graph-wrap">
@@ -135,10 +135,39 @@ function initGraph() {
   const nodes = data.nodes.map((n) => ({ ...n }));
   const links = data.links.map((l) => ({ source: l.source, target: l.target }));
 
-  // 半径：tag 按文章数放大，post 固定小圆
-  const rOf = (d) => (d.kind === "tag" ? 7 + Math.sqrt(d.size) * 6 : 5);
+  // ── 确定性锚点布局（每次打开图都一样，不随机漂移）──
+  // 标签均匀放在一个圆环上；文章放在自己关联标签的质心（圆内）。
+  // 这样「分两类一眼看清、文章连到自己的标签」的语义最直接。
+  const cx = W / 2;
+  const cy = H / 2;
+  const R = Math.min(W, H) * 0.36;
+  const tagNodes = nodes.filter((n) => n.kind === "tag");
+  tagNodes.forEach((n, i) => {
+    const angle = (2 * Math.PI * i) / Math.max(tagNodes.length, 1) - Math.PI / 2;
+    n.tx = cx + R * Math.cos(angle);
+    n.ty = cy + R * Math.sin(angle);
+  });
+  // 文章锚点 = 它关联标签锚点的质心，再往圆心收一点避开标签文字
+  for (const n of nodes) {
+    if (n.kind !== "post") continue;
+    const related = links.filter((l) => l.source === n.id || l.target === n.id);
+    const tagAnchors = related
+      .map((l) => (l.source === n.id ? l.target : l.source))
+      .map((id) => nodes.find((x) => x.id === id))
+      .filter(Boolean);
+    if (tagAnchors.length) {
+      n.tx = cx + (tagAnchors.reduce((s, t) => s + t.tx, 0) / tagAnchors.length - cx) * 0.45;
+      n.ty = cy + (tagAnchors.reduce((s, t) => s + t.ty, 0) / tagAnchors.length - cy) * 0.45;
+    } else {
+      n.tx = cx;
+      n.ty = cy;
+    }
+  }
 
-  // ── 力模拟 ──
+  // 节点统一大小（文章/标签同体型，用颜色区分类型），不搞大小分级
+  const rOf = () => 8;
+
+  // ── 力模拟：弱锚定 + 松连接，让节点从锚点平滑就位并保持不重叠 ──
   const simulation = d3force
     .forceSimulation(nodes)
     .force(
@@ -146,20 +175,20 @@ function initGraph() {
       d3force
         .forceLink(links)
         .id((d) => d.id)
-        .distance((l) => (l.source.kind === "tag" ? 95 : 75))
-        .strength(0.4),
+        .distance(70)
+        .strength(0.5),
     )
-    .force("charge", d3force.forceManyBody().strength(-180))
-    .force("center", d3force.forceCenter(W / 2, H / 2))
+    .force("x", d3force.forceX((d) => d.tx).strength(0.1))
+    .force("y", d3force.forceY((d) => d.ty).strength(0.1))
     .force(
       "collide",
       d3force
         .forceCollide()
-        .radius((d) => rOf(d) + 18)
+        .radius((d) => rOf(d) + 14)
         .strength(0.9),
     )
     .alpha(1)
-    .alphaDecay(0.022);
+    .alphaDecay(0.03);
 
   // 画边
   const linkSel = [];
@@ -183,8 +212,8 @@ function initGraph() {
 
     const circle = document.createElementNS(svgNS, "circle");
     circle.setAttribute("r", rOf(d));
-    circle.setAttribute("fill", d.kind === "tag" ? accent : muted);
-    circle.setAttribute("opacity", d.kind === "tag" ? "0.9" : "0.75");
+    circle.setAttribute("fill", d.kind === "post" ? accent : muted);
+    circle.setAttribute("opacity", d.kind === "post" ? "0.9" : "0.8");
     g.appendChild(circle);
 
     // tag 节点显示名字；post 节点悬停显示标题
