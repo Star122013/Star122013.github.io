@@ -1,0 +1,336 @@
+---
+// 主题选择器：调色板按钮 → 下拉面板
+// 主题列表与 global.css 中 [data-theme="..."] 块一一对应。
+// 新增主题需同时改这里（列表/色卡）和 global.css（变量块）。
+const themes = [
+  { id: "astropaper-light", name: "AstroPaper Light", dark: false },
+  { id: "rosepine-light", name: "Rosé Pine Dawn", dark: false },
+  { id: "rosepine-dark", name: "Rosé Pine", dark: true },
+  { id: "catppuccin-light", name: "Catppuccin Latte", dark: false },
+  { id: "catppuccin-dark", name: "Catppuccin Mocha", dark: true },
+  { id: "kanagawa-light", name: "Kanagawa Lotus", dark: false },
+  { id: "kanagawa-dark", name: "Kanagawa Dragon", dark: true },
+  { id: "gruvbox-light", name: "Gruvbox Light", dark: false },
+  { id: "gruvbox-dark", name: "Gruvbox Dark", dark: true },
+];
+const ids = themes.map((t) => t.id);
+---
+
+<div class="theme-picker" id="theme-picker">
+  <button
+    class="picker-btn"
+    id="theme-picker-btn"
+    aria-label="Choose theme"
+    aria-haspopup="true"
+    aria-expanded="false"
+  >
+    <!-- 调色板图标（无箭头） -->
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 22a10 10 0 1 1 10-10c0 3.6-2.4 5-4 5h-2a2 2 0 0 0-2 2c0 .6.2 1.2.5 1.7-.3.2-.8.3-1.5.3z"
+      />
+      <circle cx="7.5" cy="11.5" r="1" fill="currentColor" />
+      <circle cx="11" cy="7.5" r="1" fill="currentColor" />
+      <circle cx="15.5" cy="8.5" r="1" fill="currentColor" />
+    </svg>
+  </button>
+
+  <div class="picker-panel" id="theme-picker-panel" role="menu" hidden>
+    <div class="picker-head">Theme</div>
+    <div class="picker-grid">
+      {themes.map((t) => (
+        <button
+          class:list={['picker-item', { active: false }]}
+          data-theme-id={t.id}
+          role="menuitemradio"
+          aria-checked="false"
+        >
+          <span class="swatches" data-swatches={t.id} aria-hidden="true">
+            <span class="sw sw-bg"></span>
+            <span class="sw sw-fg"></span>
+            <span class="sw sw-ac"></span>
+          </span>
+          <span class="picker-name">{t.name}</span>
+          <span class="picker-check" aria-hidden="true"></span>
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+
+<script data-astro-rerun define:vars={{ themeIds: ids }}>
+(function () {
+  const THEMES = { ids: themeIds };
+  const ROOT = document.documentElement;
+
+  function currentTheme() {
+    return ROOT.getAttribute("data-theme") || "astropaper-light";
+  }
+  function applyTheme(id) {
+    if (THEMES.ids.indexOf(id) === -1) return;
+    ROOT.setAttribute("data-theme", id);
+    try {
+      localStorage.setItem("theme", id);
+    } catch (e) {}
+    // 同步浏览器地址栏主题色
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      const bg = getComputedStyle(document.body).backgroundColor;
+      if (bg && bg !== "rgba(0, 0, 0, 0)") meta.setAttribute("content", bg);
+    }
+    paint();
+  }
+  function paint() {
+    const cur = currentTheme();
+    document.querySelectorAll(".picker-item").forEach(function (btn) {
+      const active = btn.getAttribute("data-theme-id") === cur;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-checked", active ? "true" : "false");
+    });
+  }
+
+  const root = document.getElementById("theme-picker");
+  const btn = document.getElementById("theme-picker-btn");
+  const panel = document.getElementById("theme-picker-panel");
+  if (!root || !btn || !panel) return;
+
+  function open() {
+    panel.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    paint();
+  }
+  function close() {
+    panel.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+  }
+  function toggle() {
+    panel.hidden ? open() : close();
+  }
+
+  btn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    toggle();
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!root.contains(e.target)) close();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") close();
+  });
+
+  panel.addEventListener("click", function (e) {
+    const item = e.target.closest(".picker-item");
+    if (!item) return;
+    applyTheme(item.getAttribute("data-theme-id"));
+    close();
+  });
+
+  paint();
+})();
+</script>
+
+<style>
+.theme-picker {
+  position: relative;
+}
+.picker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--foreground);
+  padding: 0.3rem;
+  border-radius: 6px;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+.picker-btn:hover {
+  color: var(--accent);
+  background: var(--muted);
+}
+.picker-btn[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--muted);
+}
+
+/* 下拉面板 */
+.picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 230px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+  z-index: 50;
+  padding: 0.5rem;
+  animation: picker-in 0.14s ease-out;
+}
+@keyframes picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.picker-head {
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  padding: 0.4rem 0.6rem 0.4rem;
+  font-weight: 650;
+}
+.picker-grid {
+  display: grid;
+  gap: 2px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.42rem 0.6rem;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--popover-foreground);
+  transition: background 0.12s ease;
+}
+.picker-item:hover {
+  background: var(--muted);
+}
+.picker-item.active {
+  background: var(--muted);
+}
+
+/* 色卡：bg / fg / accent 三颗圆点 */
+.swatches {
+  display: inline-flex;
+  gap: 3px;
+}
+.sw {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  flex-shrink: 0;
+}
+.sw-bg {
+  background: var(--sw-bg);
+}
+.sw-fg {
+  background: var(--sw-fg);
+}
+.sw-ac {
+  background: var(--sw-ac);
+}
+
+/* 每个主题的色卡色值（预览用，与主题变量对应） */
+:global([data-swatches="astropaper-light"]) {
+  --sw-bg: #fcfcfc;
+  --sw-fg: #1a1a2e;
+  --sw-ac: #2563eb;
+}
+:global([data-swatches="rosepine-light"]) {
+  --sw-bg: #faf4ed;
+  --sw-fg: #575279;
+  --sw-ac: #907aa9;
+}
+:global([data-swatches="rosepine-dark"]) {
+  --sw-bg: #191724;
+  --sw-fg: #e0def4;
+  --sw-ac: #c4a7e7;
+}
+:global([data-swatches="catppuccin-light"]) {
+  --sw-bg: #eff1f5;
+  --sw-fg: #4c4f69;
+  --sw-ac: #1e66f5;
+}
+:global([data-swatches="catppuccin-dark"]) {
+  --sw-bg: #1e1e2e;
+  --sw-fg: #cdd6f4;
+  --sw-ac: #89b4fa;
+}
+:global([data-swatches="kanagawa-light"]) {
+  --sw-bg: #f2ecbc;
+  --sw-fg: #545464;
+  --sw-ac: #4d699b;
+}
+:global([data-swatches="kanagawa-dark"]) {
+  --sw-bg: #181616;
+  --sw-fg: #c5c9c5;
+  --sw-ac: #8ba4b0;
+}
+:global([data-swatches="gruvbox-light"]) {
+  --sw-bg: #fbf1c7;
+  --sw-fg: #3c3836;
+  --sw-ac: #076678;
+}
+:global([data-swatches="gruvbox-dark"]) {
+  --sw-bg: #282828;
+  --sw-fg: #ebdbb2;
+  --sw-ac: #83a598;
+}
+
+.picker-name {
+  flex: 1;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.picker-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  visibility: hidden;
+}
+.picker-item.active .picker-check {
+  visibility: visible;
+}
+.picker-item.active .picker-check::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .picker-panel {
+    position: fixed;
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    min-width: 0;
+  }
+}
+</style>

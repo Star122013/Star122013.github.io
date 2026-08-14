@@ -306,7 +306,7 @@ This step routes the packets sent by the router itself to loopback, so they can 
 After writing these and sing-box config, a network router will work.
 Below is the network topology diagram.
 #figure(
-  image("network.png", width: 80%),
+  image("network.png", width: 100%),
   caption: [
     Network Topology Diagram
   ],

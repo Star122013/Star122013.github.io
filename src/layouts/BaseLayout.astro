@@ -1,9 +1,9 @@
 ---
-import '../styles/global.css';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import { ClientRouter } from 'astro:transitions';
-import { site } from '../config';
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { ClientRouter } from "astro:transitions";
+import { site } from "../config";
 
 export interface Props {
   title?: string;
@@ -17,30 +17,47 @@ const pageDesc = description || site.description;
 
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href={site.favicon} />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#181616" media="(prefers-color-scheme: dark)" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href={site.favicon}>
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#181616" media="(prefers-color-scheme: dark)">
     <script is:inline>
-      (function() {
-        var saved = localStorage.getItem('theme');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var isLight = saved === 'light' || (!saved && !prefersDark);
-        var root = document.documentElement;
-        root.classList.toggle('light', isLight);
-        root.classList.toggle('dark', !isLight);
-        /* 抑制初始化过渡闪烁 */
-        root.style.setProperty('transition', 'none');
-        root.getBoundingClientRect();
-        root.style.removeProperty('transition');
-      })();
+    (function () {
+      // 主题列表需与 global.css 的 [data-theme=...] 块、ThemePicker.astro 保持一致
+      var THEMES = [
+        "astropaper-light",
+        "rosepine-light",
+        "rosepine-dark",
+        "catppuccin-light",
+        "catppuccin-dark",
+        "kanagawa-light",
+        "kanagawa-dark",
+        "gruvbox-light",
+        "gruvbox-dark",
+      ];
+      var root = document.documentElement;
+      var saved = null;
+      try {
+        saved = localStorage.getItem("theme");
+      } catch (e) {}
+      var theme = THEMES.indexOf(saved) !== -1 ? saved : null;
+      if (!theme) {
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        theme = prefersDark ? "kanagawa-dark" : "astropaper-light";
+      }
+      root.setAttribute("data-theme", theme);
+      /* 抑制初始化过渡闪烁 */
+      root.style.setProperty("transition", "none");
+      root.getBoundingClientRect();
+      root.style.removeProperty("transition");
+    })();
     </script>
-    <meta name="description" content={pageDesc} />
-    <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={pageDesc} />
-    <meta property="og:type" content="website" />
+    <meta name="description" content={pageDesc}>
+    <meta property="og:title" content={pageTitle}>
+    <meta property="og:description" content={pageDesc}>
+    <meta property="og:type" content="website">
     <ClientRouter />
     <title>{pageTitle}</title>
     <!-- VT 动画定义已移至 global.css（避免 Astro scoped CSS 干扰） -->
@@ -55,23 +72,17 @@ const pageDesc = description || site.description;
     <Footer />
 
     <script>
-      document.addEventListener('astro:after-swap', function() {
-        // 重新同步主题
-        var saved = localStorage.getItem('theme');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var isLight = saved === 'light' || (!saved && !prefersDark);
-        document.documentElement.classList.toggle('light', isLight);
-        document.documentElement.classList.toggle('dark', !isLight);
-
-        // 同步 theme-color
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-          var bg = getComputedStyle(document.body).backgroundColor;
-          if (bg && bg !== 'rgba(0, 0, 0, 0)') {
-            meta.setAttribute('content', bg);
-          }
+    document.addEventListener("astro:after-swap", function () {
+      // 主题由 ThemePicker 的 data-astro-rerun 脚本在新页面重新应用，
+      // 这里只需同步 theme-color
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        var bg = getComputedStyle(document.body).backgroundColor;
+        if (bg && bg !== "rgba(0, 0, 0, 0)") {
+          meta.setAttribute("content", bg);
         }
-      });
+      }
+    });
     </script>
   </body>
 </html>
