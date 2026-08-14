@@ -212,10 +212,13 @@ function initGraph() {
   }
 
   // 画节点
+  // 拖拽状态放在循环外（全局），mousemove/mouseup 统一挂在 window 上：
+  // 节点只有 8px，鼠标一移出节点事件就丢，所以移动/松手必须依赖全局事件。
   let dragNode = null;
   let dragged = false;
   let startX = 0;
   let startY = 0;
+  let movedByDrag = false;
   const nodeSel = nodes.map((d) => {
     const g = document.createElementNS(svgNS, "g");
     g.setAttribute("class", "graph-node");
@@ -241,7 +244,7 @@ function initGraph() {
       g.appendChild(tip);
     }
 
-    // 拖拽（移动端点 + 区分点击）
+    // 按下：记录候选拖拽（先不启动模拟，等真的拖动再说）
     g.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       dragged = false;
@@ -250,36 +253,6 @@ function initGraph() {
       dragNode = d;
       d.fx = d.x;
       d.fy = d.y;
-    });
-    g.addEventListener("mousemove", (e) => {
-      if (!dragNode || dragNode !== d) return;
-      if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 3) {
-        dragged = true;
-      }
-      if (!dragged) return;
-      const rect = svg.getBoundingClientRect();
-      d.fx = (e.clientX - rect.left - pan.x) / pan.k;
-      d.fy = (e.clientY - rect.top - pan.y) / pan.k;
-      // 单次加热而不是 alphaTarget（避免每个 mousemove 都持续加热导致抖动）；
-      // 节点位置由 fx/fy 直接驱动，模拟只负责把其他节点轻轻让开。
-      simulation.alpha(0.25).restart();
-    });
-    g.addEventListener("mouseup", () => {
-      if (!dragNode || dragNode !== d) return;
-      dragNode = null;
-      simulation.alphaTarget(0);
-      // 让模拟在 alphaDecay(0.06) 下很快自行停住（alpha 降到下限即自动停止），
-      // 不要 stop()，否则后续拖拽的 restart() 无 alpha 可跑。
-      if (dragged) {
-        // 拖过：原地固定（Obsidian 风格），并更新锚点避免松手后弹回
-        d.tx = d.x;
-        d.ty = d.y;
-        d.fx = null;
-        d.fy = null;
-      } else {
-        // 纯点击：跳转
-        window.location.href = d.href;
-      }
     });
 
     // 悬停高亮：自身 + 邻居亮，其余淡
@@ -295,6 +268,11 @@ function initGraph() {
   function applyTransform() {
     view.setAttribute("transform", "translate(" + pan.x + "," + pan.y + ") scale(" + pan.k + ")");
   }
+
+  // 空白按下：开始平移
+  let panning = false;
+  let px = 0;
+  let py = 0;
 
   // 悬停
   function hoverNode(d) {
@@ -318,26 +296,62 @@ function initGraph() {
     }
   }
 
-  // 空白拖拽平移
-  let panning = false;
-  let px = 0;
-  let py = 0;
+  // ── 全局鼠标事件（注册一次，导航重跑时先移除旧的）──
+  const onMove = (e) => {
+    // 拖节点
+    if (dragNode) {
+      if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 3) {
+        dragged = true;
+        movedByDrag = true;
+      }
+      if (dragged) {
+        // 缓存 svg 位置，避免每个 mousemove 都触发 reflow
+        const rect = svg.getBoundingClientRect();
+        dragNode.fx = (e.clientX - rect.left - pan.x) / pan.k;
+        dragNode.fy = (e.clientY - rect.top - pan.y) / pan.k;
+        // 让其他节点轻让开；fx/fy 直接驱动被拖节点本身
+        simulation.alpha(0.25).restart();
+      }
+    }
+    // 平移画布
+    if (panning) {
+      pan.x += e.clientX - px;
+      pan.y += e.clientY - py;
+      px = e.clientX;
+      py = e.clientY;
+      applyTransform();
+    }
+  };
+  const onUp = () => {
+    if (dragNode) {
+      const d = dragNode;
+      dragNode = null;
+      if (movedByDrag) {
+        // 拖过：节点永久固定在此处（Obsidian 风格），并停止模拟，
+        // 避免 link/collide 力在松手后把节点拉走（“甩”）
+        d.fx = d.x;
+        d.fy = d.y;
+        simulation.stop();
+      } else {
+        // 纯点击：跳转
+        window.location.href = d.href;
+      }
+      dragged = false;
+      movedByDrag = false;
+    }
+    panning = false;
+  };
+  window.removeEventListener("mousemove", onMove);
+  window.removeEventListener("mouseup", onUp);
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+
+  // 空白按下：开始平移
   svg.addEventListener("mousedown", (e) => {
     if (e.target !== svg && e.target !== gLinks) return;
     panning = true;
     px = e.clientX;
     py = e.clientY;
-  });
-  window.addEventListener("mousemove", (e) => {
-    if (!panning) return;
-    pan.x += e.clientX - px;
-    pan.y += e.clientY - py;
-    px = e.clientX;
-    py = e.clientY;
-    applyTransform();
-  });
-  window.addEventListener("mouseup", () => {
-    panning = false;
   });
 
   // 滚轮缩放（以鼠标为中心）
