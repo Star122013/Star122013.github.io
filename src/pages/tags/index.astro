@@ -96,6 +96,7 @@ const graphData = JSON.stringify({ nodes, links });
 // for astro:after-swap and re-initialize after view-transition navigations.
 // No arrows: edges are plain segments without directional markers.
 import * as d3force from "d3-force";
+import { navigate } from "astro:transitions/client";
 
 function initGraph() {
   const dataEl = document.getElementById("graph-data");
@@ -341,8 +342,8 @@ function initGraph() {
         d.fy = d.y;
         simulation.stop();
       } else {
-        // Plain click: navigate
-        window.location.href = d.href;
+        // Plain click: navigate with a view transition (smooth, like Astro links)
+        navigate(d.href);
       }
       dragged = false;
       movedByDrag = false;
