@@ -398,10 +398,32 @@ function initGraph() {
 }
 
 initGraph();
+
 // Re-initialize after view-transition navigation (e.g. article page -> Tags)
 document.addEventListener("astro:after-swap", () => {
   initGraph();
 });
+
+// Live re-theme: node/label/link colors are baked into SVG attributes from
+// computed styles at init, but the SVG background is plain CSS and updates
+// instantly. Switching the theme in-place (ThemePicker dropdown, no
+// navigation) therefore leaves the text colors stale — on a freshly-dark
+// background the old light-theme label text goes dark-on-dark and becomes
+// unreadable. Watch data-theme changes and rebuild with the fresh colors.
+let themeWatcher = null;
+function watchThemeChanges() {
+  if (themeWatcher) return;
+  let timer = null;
+  themeWatcher = new MutationObserver(() => {
+    clearTimeout(timer);
+    timer = setTimeout(initGraph, 80);
+  });
+  themeWatcher.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+}
+watchThemeChanges();
 </script>
 
 <style>
@@ -436,8 +458,8 @@ document.addEventListener("astro:after-swap", () => {
   stroke-linecap: round;
 }
 .graph-label {
-  font-size: 0.8em;
-  font-weight: 500;
+  font-size: 0.85em;
+  font-weight: 600;
   pointer-events: none;
   paint-order: stroke;
   stroke: var(--graph-bg, var(--code-bg));
